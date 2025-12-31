@@ -12,6 +12,8 @@ const baseUrl = "/purchase";
 export const purchaseApi = {
   // PO
   getPO: (id: string) => http.get<PurchaseOrderDto>(`${baseUrl}/po/${id}`),
+  getPOM0: (id: string) => http.get<PurchaseOrderDto>(`${baseUrl}/pom0/${id}`),
+
   getPOs: (params?: PurchaseQueryParams) => http.get<PurchaseOrderDto[]>(`${baseUrl}/po`, { params }),
   createPOs: (payload: PurchaseOrderCreateRequest) => http.post(`${baseUrl}/po`, payload),
 

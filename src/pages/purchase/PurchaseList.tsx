@@ -46,29 +46,36 @@ export default function PurchaseList() {
 
   // --- Columns
   const columns = [
-    { title: "PO ID", dataIndex: "id" },
-    { title: "Code", dataIndex: "code" },
-    {
-      title: "Supplier",
-      dataIndex: "supplierId",
-      render: (supplierId: number) => {
-        if (loadingSuppliers) return <Spin size="small" />;
-        const supplier = suppliers.find(s => s.id === supplierId);
-        return supplier ? supplier.name : "Unknown";
+  { title: "PO ID", dataIndex: "id" },
+  { title: "Code", dataIndex: "code" },
+  {
+    title: "Supplier",
+    dataIndex: "supplierId",
+    render: (supplierId: number) => {
+      if (loadingSuppliers) return <Spin size="small" />;
+      const supplier = suppliers.find(s => s.id === supplierId);
+      return supplier ? supplier.name : "Unknown";
+    }
+  },
+  { title: "Status", dataIndex: "status" },
+  { title: "Created At", dataIndex: "createdAt" },
+  {
+    title: "Action",
+    render: (_: any, record: PurchaseOrderDto) => {
+      // Ẩn nút nếu status là Approved hoặc Rejected
+      if (record.status === "Approved" || record.status === "Rejected") {
+        return <span style={{ color: "#999" }}>—</span>;
       }
-    },
-    { title: "Status", dataIndex: "status" },
-    { title: "Created At", dataIndex: "createdAt" },
-    {
-      title: "Action",
-      render: (_: any, record: PurchaseOrderDto) => (
+      
+      return (
         <>
           <Button type="link" onClick={() => approve(record.id)}>Approve</Button>
           <Button type="link" danger onClick={() => reject(record.id)}>Reject</Button>
         </>
-      )
+      );
     }
-  ];
+  }
+];
 
   const approve = async (id: string) => {
     try {

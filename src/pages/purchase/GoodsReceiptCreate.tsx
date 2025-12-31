@@ -37,7 +37,7 @@ export default function GRCreate() {
   const onPOChange = async (poId: string) => {
     try {
       setLoading(true);
-      const res = await purchaseApi.getPO(poId);
+      const res = await purchaseApi.getPOM0(poId);
       const po = res.data;
       
       const mappedProducts = po.items?.map((i: any) => ({

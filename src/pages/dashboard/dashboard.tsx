@@ -4,6 +4,7 @@ import { DatabaseOutlined, HomeOutlined, BoxPlotOutlined, ShoppingCartOutlined }
 import { inventoryApi } from "../../api/inventory.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { salesApi } from "../../api/sale.api";
+import { productApi } from "../../api/product.api";
 
 const { Text, Title } = Typography;
 
@@ -56,8 +57,8 @@ export default function Dashboard() {
       const invRes = await inventoryApi.query({});
       const inventories = invRes.data || [];
 
-      const productIds = Array.from(new Set(inventories.map(i => i.productId)));
-      setTotalProducts(productIds.length);
+      const productIds = productApi.getAll();
+      setTotalProducts((await productIds).data.length);
 
       const overview: InventoryOverview[] = warehouses.map(wh => {
         const whItems = inventories.filter(i => i.warehouseId === wh.id);

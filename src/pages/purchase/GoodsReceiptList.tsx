@@ -52,6 +52,7 @@ export default function GRList() {
     gr.items.map(item => ({
       key: `${gr.id}-${item.productId}`,
       grId: gr.id,
+      code: gr.code,
       poId: gr.poIds , // sửa nếu API trả về tên khác
       productId: item.productId,
       quantity: item.quantity,
@@ -63,17 +64,12 @@ export default function GRList() {
 
   const columns = [
     { title: "GR ID", dataIndex: "grId" },
-    { title: "PO ID", dataIndex: "poId" },
+    { title: "GR CODE", dataIndex: "code" },
     { title: "Product ID", dataIndex: "productId" },
     { title: "Quantity", dataIndex: "quantity" },
     { title: "Location", dataIndex: "locationId" },
     { title: "Created At", dataIndex: "createdAt" },
-    {
-      title: "Action",
-      render: (_: any, record: any) => (
-        <Button danger onClick={() => cancelGR(record.cancelId)}>Cancel</Button>
-      ),
-    },
+    
   ];
 
   return (
