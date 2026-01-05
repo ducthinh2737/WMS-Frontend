@@ -10,6 +10,8 @@ import type {
 
 export const productApi = {
     getAll: () => http.get<Product[]>("/product"),
+    getAllBySupplier: (supplierId: number) => http.get<Product[]>(`/product/By-Supplier/${supplierId}`),
+
 
     getById: (id: number) => http.get<Product>(`/product/${id}`),
 

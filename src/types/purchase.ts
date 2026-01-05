@@ -5,6 +5,8 @@ export interface PurchaseOrderDto {
   items: {
     productId: string;
     quantity: number;
+    status: number;
+    receivedQuantity: number;
     locationId: string;
     price?: number;
   }[];
@@ -32,14 +34,22 @@ export interface PurchaseOrderCreateRequest {
   items: PurchaseItemForm[];
 }
 export interface GoodsReceiptItemDto {
-  productId: string;
+  id: string;                 // backend: id
+  productId: number;          // backend: productId
   productName?: string;
-  quantity: number;
-  receivedQuantity?: number; // nếu muốn track số lượng đã nhận
+
+  quantity: number;           // backend: quantity
+  received_Qty: number;       // backend: received_Qty
+
+  status: number;             // backend: status
+  createdAt?: string;
+  updatedAt?: string;
 }
+
 
 export interface GoodsReceiptDto {
   id: string;
+  Status: number;
   code: string;
   poIds: string;
   warehouseId: string;
@@ -54,7 +64,6 @@ export interface GoodsReceiptCreateRequest {
   warehouseId: string;
   items: {
     productId: string;
-    locationId: string;
     quantity: number;
   }[];
 }

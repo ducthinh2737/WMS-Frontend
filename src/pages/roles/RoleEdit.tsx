@@ -1,38 +1,81 @@
-import { Form, Input, Button, Card, message } from "antd";
+import { Form, Input, Modal, message, Spin } from "antd";
 import { roleApi } from "../../api/role.api";
-import { useNavigate, useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export default function RoleEdit() {
-    const { id } = useParams();
-    const roleId = Number(id ?? 0);
-    const [form] = Form.useForm();
-    const navigate = useNavigate();
+interface Props {
+  open: boolean;
+  roleId?: number; // Nhận ID từ trang cha truyền vào
+  onCancel: () => void;
+  onSuccess: () => void;
+}
 
-    const load = async () => {
-        const role = (await roleApi.get(roleId)).data;
-        form.setFieldsValue(role);
-    };
+export default function RoleEditModal({ open, roleId, onCancel, onSuccess }: Props) {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false); // Loading khi bấm Save
+  const [fetching, setFetching] = useState(false); // Loading khi đang tải dữ liệu cũ
 
-    useEffect(() => { load(); }, []);
+  // Tự động load dữ liệu mỗi khi mở Modal và có roleId
+  useEffect(() => {
+    if (open && roleId) {
+      loadRole();
+    } else {
+      form.resetFields();
+    }
+  }, [open, roleId]);
 
-    const onFinish = async (values: any) => {
-        await roleApi.update(roleId, values);
-        message.success("Updated");
-        navigate("/roles");
-    };
+  const loadRole = async () => {
+    setFetching(true);
+    try {
+      const res = await roleApi.get(Number(roleId));
+      form.setFieldsValue(res.data);
+    } catch (err) {
+      message.error("Không thể lấy thông tin quyền");
+      onCancel();
+    } finally {
+      setFetching(false);
+    }
+  };
 
-    return (
-        <Card title="Edit Role" style={{ width: 400, margin: "40px auto" }}>
-            <Form layout="vertical" form={form} onFinish={onFinish}>
-                <Form.Item label="Role Name" name="roleName" rules={[{ required: true }]}>
-                    <Input />
-                </Form.Item>
+  const onFinish = async (values: any) => {
+    setLoading(true);
+    try {
+      await roleApi.update(Number(roleId), values);
+      message.success("Cập nhật thành công");
+      onSuccess();
+    } catch (err) {
+      message.error("Cập nhật thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                <Button type="primary" htmlType="submit" block>
-                    Save
-                </Button>
-            </Form>
-        </Card>
-    );
+  return (
+    <Modal
+      title="Edit Role"
+      open={open}
+      onCancel={onCancel}
+      onOk={() => form.submit()} // Tận dụng nút của Modal
+      confirmLoading={loading}
+      okText="Save"
+      cancelText="Cancel"
+      destroyOnClose
+    >
+      <Spin spinning={fetching}>
+        <Form 
+          form={form} 
+          layout="vertical" 
+          onFinish={onFinish}
+          style={{ marginTop: 20 }}
+        >
+          <Form.Item 
+            label="Role Name" 
+            name="roleName" 
+            rules={[{ required: true, message: "Vui lòng nhập tên quyền" }]}
+          >
+            <Input placeholder="Enter role name..." />
+          </Form.Item>
+        </Form>
+      </Spin>
+    </Modal>
+  );
 }

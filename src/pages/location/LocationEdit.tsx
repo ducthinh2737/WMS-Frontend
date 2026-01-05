@@ -1,81 +1,116 @@
+import { Form, Input, Modal, message, Select, Switch, Spin } from "antd";
 import { useEffect, useState } from "react";
-import { Card, Form, Input, Button, message, Switch } from "antd";
-import { useNavigate, useParams } from "react-router-dom";
 import { locationApi } from "../../api/location.api";
-import type { LocationDto, LocationUpdateDto } from "../../types/location";
+import type { LocationUpdateDto } from "../../types/location";
 
-export default function LocationEdit() {
-  const { warehouseId, id } = useParams<{ warehouseId: string; id: string }>();
-  const navigate = useNavigate();
+// Định nghĩa Interface cho Props để tránh lỗi TS 2322
+interface LocationEditModalProps {
+  open: boolean;
+  warehouseId: string;
+  locationId?: string; // ID của vị trí cần sửa
+  onCancel: () => void;
+  onSuccess: () => void;
+}
+
+const LocationTypeOptions = [
+  { value: 1, label: "Khu vực tiếp nhận" },
+  { value: 2, label: "Khu vực lưu trữ" },
+  { value: 3, label: "Khu vực xuất hàng" },
+  { value: 4, label: "Khu vực hàng hỏng" },
+  { value: 5, label: "Khu vực hàng trả" }
+];
+
+export default function LocationEditModal({ 
+  open, 
+  warehouseId, 
+  locationId, 
+  onCancel, 
+  onSuccess 
+}: LocationEditModalProps) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
+  // Load dữ liệu cũ vào Form khi mở Modal
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await locationApi.getById(warehouseId!, id!);
-        const loc: LocationDto = res.data;
-
-        form.setFieldsValue({
-          code: loc.code,
-          description: loc.description,
-          isActive: loc.isActive,
-        });
-      } catch {
-        message.error("Failed to load location");
-        navigate(`/warehouse/${warehouseId}/locations`);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [warehouseId, id, form, navigate]);
+    if (open && warehouseId && locationId) {
+      const loadDetail = async () => {
+        setFetching(true);
+        try {
+          const res = await locationApi.getById(warehouseId, locationId);
+          form.setFieldsValue(res.data);
+        } catch (err) {
+          message.error("Không thể tải thông tin vị trí");
+          onCancel();
+        } finally {
+          setFetching(false);
+        }
+      };
+      loadDetail();
+    }
+  }, [open, warehouseId, locationId, form]);
 
   const onFinish = async (values: any) => {
+    setLoading(true);
     try {
       const payload: LocationUpdateDto = {
-        id: id!,
+        id: locationId!,
         code: values.code?.toUpperCase().trim(),
+        LocationType: values.type,
         description: values.description?.trim() || "",
         isActive: values.isActive,
       };
-      await locationApi.update(warehouseId!, id!, payload);
-      message.success("Location updated");
-      navigate(`/warehouse/${warehouseId}/locations`);
+
+      await locationApi.update(warehouseId, locationId!, payload);
+      message.success("Cập nhật vị trí thành công");
+      onSuccess();
     } catch (err: any) {
-      message.error(err.response?.data?.message || "Update failed");
+      message.error(err.response?.data?.message || "Cập nhật thất bại");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Card title="Edit Location" loading={loading}>
-      <Form form={form} layout="vertical" onFinish={onFinish} style={{ maxWidth: 600 }}>
-        <Form.Item
-          label="Code"
-          name="code"
-          rules={[{ required: true, message: "Please enter location code" }]}
+    <Modal
+      title="Chỉnh sửa vị trí lưu trữ"
+      open={open}
+      onCancel={onCancel}
+      onOk={() => form.submit()}
+      confirmLoading={loading}
+      centered
+      destroyOnClose
+    >
+      <Spin spinning={fetching}>
+        <Form 
+          form={form} 
+          layout="vertical" 
+          onFinish={onFinish}
         >
-          <Input />
-        </Form.Item>
+          <Form.Item
+            label="Mã vị trí"
+            name="code"
+            rules={[
+              { required: true, message: "Vui lòng nhập mã vị trí" },
+              { pattern: /^[A-Z]\d-\d{2}-\d{2}$/, message: "Định dạng đúng: A1-01-03" },
+            ]}
+          >
+            <Input placeholder="Ví dụ: A1-01-03" />
+          </Form.Item>
 
-        <Form.Item label="Description" name="description">
-          <Input.TextArea rows={3} />
-        </Form.Item>
+          <Form.Item label="Loại vị trí" name="type" rules={[{ required: true }]}>
+            <Select options={LocationTypeOptions} />
+          </Form.Item>
 
-        <Form.Item label="Active" name="isActive" valuePropName="checked">
-          <Switch />
-        </Form.Item>
+          <Form.Item label="Mô tả" name="description">
+            <Input.TextArea rows={3} />
+          </Form.Item>
 
-        <Form.Item>
-          <Button type="primary" htmlType="submit">
-            Update
-          </Button>
-          <Button style={{ marginLeft: 8 }} onClick={() => navigate(`/warehouse/${warehouseId}/locations`)}>
-            Cancel
-          </Button>
-        </Form.Item>
-      </Form>
-    </Card>
+          <Form.Item label="Trạng thái hoạt động" name="isActive" valuePropName="checked">
+            <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+          </Form.Item>
+        </Form>
+      </Spin>
+    </Modal>
   );
 }

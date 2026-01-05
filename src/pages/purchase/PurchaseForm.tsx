@@ -1,149 +1,145 @@
-import { Form, Select, InputNumber, Button, message, Input, Space } from "antd";
+import { Form, Select, InputNumber, Button, message, Input, Space, Modal } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useState, useEffect } from "react";
 import { purchaseApi } from "../../api/purchase.api";
 import { productApi } from "../../api/product.api";
 import { supplierApi } from "../../api/supplier.api";
-import { useNavigate } from "react-router-dom";
+import { warehouseApi } from "../../api/warehouse.api";
 import type { Product } from "../../types/product";
 import type { SupplierDto } from "../../types/supplier";
+import type { WarehouseDto } from "../../types/warehouse";
 
-interface PurchaseItemForm {
-  productId: string;
-  price: number;
-  quantity: number;
+interface Props {
+  open: boolean;
+  onCancel: () => void;
+  onSuccess: () => void;
 }
 
-interface PurchaseOrderCreateRequest {
-  supplierId: number;
-  code: string;
-  items: PurchaseItemForm[];
-}
-
-export default function PurchaseForm() {
+export default function PurchaseCreateModal({ open, onCancel, onSuccess }: Props) {
   const [form] = Form.useForm();
-  const navigate = useNavigate();
-
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await productApi.getAll();
-        setProducts(res.data);
-      } catch {
-        message.error("Failed to load products");
-      }
-    };
-
-    const fetchSuppliers = async () => {
-      try {
-        const res = await supplierApi.getAll();
-        setSuppliers(res.data);
-      } catch {
-        message.error("Failed to load suppliers");
-      }
-    };
-
-    fetchProducts();
-    fetchSuppliers();
-  }, []);
-
-  const onFinish = async (values: any) => {
-    if (!values.items || values.items.length === 0) {
-      message.error("Please add at least one product");
-      return;
-    }
-
-    const payload: PurchaseOrderCreateRequest = {
-      supplierId: values.supplierId,
-      code: values.code,
-      items: values.items.map((i: any) => ({
-        productId: i.productId,
-        price: i.price,
-        quantity: i.quantity,
-      })),
-    };
-
-    try {
-      await purchaseApi.createPOs(payload);
-      message.success("PO created successfully");
+    if (open) {
+      fetchInitialData();
+    } else {
       form.resetFields();
-      navigate("/purchase");
+      setSelectedSupplierId(null);
+    }
+  }, [open]);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      const [suppRes, whRes] = await Promise.all([
+        supplierApi.getAll(),
+        warehouseApi.query(1, 999),
+      ]);
+      setSuppliers(suppRes.data);
+      setWarehouses(whRes.data.items);
     } catch {
-      message.error("Failed to create PO");
+      message.error("Không thể tải dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSupplierChange = async (supplierId: number) => {
+    setSelectedSupplierId(supplierId);
+    form.setFieldsValue({ items: [] });
+    try {
+      setLoadingProducts(true);
+      const prodRes = await productApi.getAllBySupplier(supplierId);
+      setProducts(prodRes.data);
+    } catch {
+      message.error("Không thể tải sản phẩm");
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      if (!values.items || values.items.length === 0) {
+        return message.error("Vui lòng thêm ít nhất một sản phẩm");
+      }
+
+      setLoading(true);
+      await purchaseApi.createPOs({
+        ...values,
+        items: values.items.map((i: any) => ({ ...i, productId: String(i.productId) }))
+      });
+      message.success("Tạo đơn mua hàng thành công!");
+      onSuccess();
+    } catch (err: any) {
+      if (err.errorFields) return; // Form validation failed
+      message.error(err?.response?.data?.message || "Tạo thất bại");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Form form={form} layout="vertical" onFinish={onFinish} style={{ maxWidth: 600 }}>
-      <Form.Item
-        label="Supplier"
-        name="supplierId"
-        rules={[{ required: true, message: "Supplier is required" }]}
-      >
-        <Select
-          placeholder="Select supplier"
-          options={suppliers.map((s) => ({ label: s.name, value: s.id }))}
-        />
-      </Form.Item>
+    <Modal
+      title="Tạo đơn mua hàng mới"
+      open={open}
+      onCancel={onCancel}
+      onOk={handleSubmit}
+      confirmLoading={loading}
+      width={1000}
+      okText="Tạo đơn"
+      cancelText="Hủy"
+      destroyOnClose
+    >
+      <Form form={form} layout="vertical">
+        <Space style={{ display: "flex" }} align="baseline">
+          <Form.Item label="Nhà cung cấp" name="supplierId" rules={[{ required: true }]} style={{ width: 300 }}>
+            <Select placeholder="Chọn nhà cung cấp" onChange={handleSupplierChange}>
+              {suppliers.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item label="Mã PO" name="code" rules={[{ required: true }]} style={{ width: 300 }}>
+            <Input placeholder="VD: PO20260001" />
+          </Form.Item>
+        </Space>
 
-      <Form.Item
-        label="PO Code"
-        name="code"
-        rules={[{ required: true, message: "PO code is required" }]}
-      >
-        <Input />
-      </Form.Item>
-
-      <Form.List name="items">
-        {(fields, { add, remove }) => (
-          <>
-            {fields.map((field) => (
-              <Space key={field.key} style={{ display: "flex", marginBottom: 8 }} align="baseline">
-                <Form.Item
-                  {...field}
-                  name={[field.name, "productId"]}
-                  rules={[{ required: true, message: "Select product" }]}
-                >
-                  <Select
-                    style={{ width: 200 }}
-                    options={products.map((p) => ({ label: p.name, value: p.id }))}
-                    placeholder="Select product"
-                  />
-                </Form.Item>
-                <Form.Item
-                  {...field}
-                  name={[field.name, "quantity"]}
-                  rules={[{ required: true, message: "Enter quantity" }]}
-                >
-                  <InputNumber min={1} placeholder="Quantity" />
-                </Form.Item>
-                <Form.Item
-                  {...field}
-                  name={[field.name, "price"]}
-                  rules={[{ required: true, message: "Enter price" }]}
-                >
-                  <InputNumber min={0} placeholder="Price" style={{ width: 100 }} />
-                </Form.Item>
-                <MinusCircleOutlined onClick={() => remove(field.name)} />
-              </Space>
-            ))}
-            <Form.Item>
-              <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                Add Product
+        <Form.List name="items">
+          {(fields, { add, remove }) => (
+            <>
+              {fields.map(({ key, name, ...restField }) => (
+                <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="baseline">
+                  <Form.Item {...restField} name={[name, "productId"]} rules={[{ required: true }]} >
+                    <Select style={{ width: 220 }} placeholder="Sản phẩm" loading={loadingProducts} disabled={!selectedSupplierId}>
+                      {products.map(p => <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>)}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item {...restField} name={[name, "warehouseId"]} rules={[{ required: true }]} >
+                    <Select style={{ width: 180 }} placeholder="Kho nhận">
+                      {warehouses.map(w => <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>)}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item {...restField} name={[name, "quantity"]} rules={[{ required: true }]} >
+                    <InputNumber min={1} placeholder="SL" style={{ width: 80 }} />
+                  </Form.Item>
+                  <Form.Item {...restField} name={[name, "price"]} rules={[{ required: true }]} >
+                    <InputNumber min={0} placeholder="Giá" style={{ width: 120 }} />
+                  </Form.Item>
+                  <MinusCircleOutlined onClick={() => remove(name)} style={{ color: "red" }} />
+                </Space>
+              ))}
+              <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />} disabled={!selectedSupplierId}>
+                Thêm sản phẩm
               </Button>
-            </Form.Item>
-          </>
-        )}
-      </Form.List>
-
-      <Form.Item>
-        <Button type="primary" htmlType="submit">
-          Create PO
-        </Button>
-      </Form.Item>
-    </Form>
+            </>
+          )}
+        </Form.List>
+      </Form>
+    </Modal>
   );
 }

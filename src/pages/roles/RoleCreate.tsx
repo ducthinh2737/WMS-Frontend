@@ -1,27 +1,56 @@
-import { Form, Input, Button, Card, message } from "antd";
+import { Form, Input, Button, Modal, message } from "antd";
 import { roleApi } from "../../api/role.api";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
-export default function RoleCreate() {
-    const navigate = useNavigate();
+interface Props {
+    open: boolean;
+    onCancel: () => void;
+    onSuccess: () => void;
+}
+
+export default function RoleCreateModal({ open, onCancel, onSuccess }: Props) {
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
 
     const onFinish = async (values: any) => {
-        await roleApi.create(values);
-        message.success("Role created");
-        navigate("/roles");
+        setLoading(true);
+        try {
+            await roleApi.create(values);
+            message.success("Role created successfully");
+            form.resetFields();
+            onSuccess();
+        } catch (err) {
+            message.error("Failed to create role");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <Card title="Create Role" style={{ width: 400, margin: "40px auto" }}>
-            <Form layout="vertical" onFinish={onFinish}>
-                <Form.Item label="Role Name" name="roleName" rules={[{ required: true }]}>
-                    <Input />
+        <Modal
+            title="Create New Role"
+            open={open}
+            onCancel={onCancel}
+            onOk={() => form.submit()} // Liên kết nút OK của Modal với Form submit
+            confirmLoading={loading}
+            destroyOnClose
+            okText="Create"
+            cancelText="Cancel"
+        >
+            <Form 
+                form={form} 
+                layout="vertical" 
+                onFinish={onFinish}
+                style={{ marginTop: 20 }}
+            >
+                <Form.Item 
+                    label="Role Name" 
+                    name="roleName" 
+                    rules={[{ required: true, message: "Please enter role name" }]}
+                >
+                    <Input placeholder="Example: Manager, Staff..." />
                 </Form.Item>
-
-                <Button type="primary" htmlType="submit" block>
-                    Create
-                </Button>
             </Form>
-        </Card>
+        </Modal>
     );
 }

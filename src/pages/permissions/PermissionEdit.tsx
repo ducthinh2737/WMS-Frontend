@@ -1,46 +1,60 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { Form, Input, Button, Card, message } from "antd";
-import { useEffect } from "react";
+import { Modal, Form, Input, message } from "antd";
+import { useEffect, useState } from "react";
 import { permissionApi } from "../../api/permission.api";
-import PageHeader from "../../components/PageHeader";
 
-export default function PermissionEdit() {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const [form] = Form.useForm();
+interface Props {
+  open: boolean;
+  data: any | null; // null là thêm mới, có data là sửa
+  onCancel: () => void;
+  onSuccess: () => void;
+}
 
-    const load = async () => {
-        const res = await permissionApi.getAll();
-        const item = res.data.find((x: any) => x.id == id);
-        form.setFieldsValue(item);
-    };
+export default function PermissionFormModal({ open, data, onCancel, onSuccess }: Props) {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-    useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (open) {
+      if (data) form.setFieldsValue(data);
+      else form.resetFields();
+    }
+  }, [open, data, form]);
 
-    const onFinish = async (values: any) => {
-        await permissionApi.update(Number(id), values);
-        message.success("Updated");
-        navigate("/permissions");
-    };
+  const onFinish = async (values: any) => {
+    setLoading(true);
+    try {
+      if (data) {
+        await permissionApi.update(data.id, values); // Giả định bạn có api update
+        message.success("Updated successfully");
+      } else {
+        await permissionApi.create(values);
+        message.success("Created successfully");
+      }
+      onSuccess();
+    } catch {
+      message.error("Operation failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <>
-            <PageHeader title="Edit Permission" />
-
-            <Card>
-                <Form form={form} layout="vertical" onFinish={onFinish}>
-    <Form.Item label="Code" name="code" rules={[{ required: true }]}>
-        <Input />
-    </Form.Item>
-
-    <Form.Item label="Description" name="description">
-        <Input.TextArea rows={3} />
-    </Form.Item>
-
-    <Button type="primary" htmlType="submit">Save</Button>
-</Form>
-
-            </Card>
-        </>
-    );
+  return (
+    <Modal
+      title={data ? "Edit Permission" : "Create Permission"}
+      open={open}
+      onCancel={onCancel}
+      onOk={() => form.submit()}
+      confirmLoading={loading}
+      destroyOnClose
+    >
+      <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form.Item label="Code" name="code" rules={[{ required: true }]}>
+          <Input placeholder="user.create" />
+        </Form.Item>
+        <Form.Item label="Description" name="description">
+          <Input.TextArea rows={3} placeholder="Mô tả chức năng" />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
 }

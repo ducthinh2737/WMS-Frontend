@@ -83,9 +83,6 @@ export default function AdminLayout() {
               <Menu.Item key="users-list">
                 <Link to="users">User List</Link>
               </Menu.Item>
-              <Menu.Item key="users-create">
-                <Link to="users/create">Create User</Link>
-              </Menu.Item>
             </Menu.SubMenu>
 
             {/* ROLES */}
@@ -93,18 +90,12 @@ export default function AdminLayout() {
               <Menu.Item key="roles-list">
                 <Link to="/roles">Role List</Link>
               </Menu.Item>
-              <Menu.Item key="roles-create">
-                <Link to="/roles/create">Create Role</Link>
-              </Menu.Item>
             </Menu.SubMenu>
 
             {/* WAREHOUSE */}
             <Menu.SubMenu key="warehouse" icon={<HomeOutlined />} title="WAREHOUSE">
               <Menu.Item key="warehouse-list">
                 <Link to="/warehouse">Warehouses</Link>
-              </Menu.Item>
-              <Menu.Item key="warehouse-create">
-                <Link to="/warehouse/create">Create Warehouse</Link>
               </Menu.Item>
             </Menu.SubMenu>
             {/* TRANSFER */}
@@ -129,21 +120,12 @@ export default function AdminLayout() {
               <Menu.Item key="location-list">
                 <Link to="/warehouse/locations">Locations</Link>
               </Menu.Item>
-              <Menu.Item key="location-create">
-                <Link to="/warehouse/locations/create">Create Location</Link>
-              </Menu.Item>
             </Menu.SubMenu>
 
             {/* INVENTORY */}
             <Menu.SubMenu key="inventory" icon={<DatabaseOutlined />} title="INVENTORY">
               <Menu.Item key="inventory-list">
                 <Link to="/inventory">Inventory List</Link>
-              </Menu.Item>
-              <Menu.Item key="inventory-adjust">
-                <Link to="/inventory/adjust">Adjust Inventory</Link>
-              </Menu.Item>
-              <Menu.Item key="inventory-history">
-                <Link to="/inventory/history">Inventory History</Link>
               </Menu.Item>
             </Menu.SubMenu>
 
@@ -184,16 +166,12 @@ export default function AdminLayout() {
   <Menu.Item key="purchase-list">
     <Link to="/purchase">Purchase List</Link>
   </Menu.Item>
-  <Menu.Item key="purchase-create">
-    <Link to="/purchase/form">Create Purchase</Link>
-  </Menu.Item>
+
   <Menu.Divider />
   <Menu.Item key="gr-list">
     <Link to="/goodsreceipt">Goods Receipt List</Link>
   </Menu.Item>
-  <Menu.Item key="gr-create">
-    <Link to="/goodsreceipt/form">Create Goods Receipt</Link>
-  </Menu.Item>
+
 </Menu.SubMenu>
 
 {/* SALES */}

@@ -36,11 +36,11 @@ export default function GoodsIssueList() {
   return (
     <Card
       title="Goods Issue List"
-      extra={
-        <Button type="primary" onClick={() => navigate("/sales/goods-issue/create")}>
-          Create Goods Issue
-        </Button>
-      }
+      // extra={
+      //   <Button type="primary" onClick={() => navigate("/sales/goods-issue/create")}>
+      //     Create Goods Issue
+      //   </Button>
+      // }
     >
       <Table
         dataSource={list}

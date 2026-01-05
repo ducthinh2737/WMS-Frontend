@@ -1,12 +1,19 @@
-import { Button, Card, Form, Input, message } from "antd";
-import { useNavigate } from "react-router-dom";
+import { Button, Form, Input, message, Modal } from "antd";
+import { useState } from "react";
 import { warehouseApi } from "../../api/warehouse.api";
 
-export default function WarehouseCreate() {
-  const navigate = useNavigate();
+interface Props {
+  open: boolean;
+  onCancel: () => void;
+  onSuccess: () => void;
+}
+
+export default function WarehouseCreateModal({ open, onCancel, onSuccess }: Props) {
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
   const onFinish = async (values: any) => {
+    setLoading(true);
     try {
       await warehouseApi.create({
         code: values.code.trim().toUpperCase(),
@@ -14,22 +21,33 @@ export default function WarehouseCreate() {
         address: values.address?.trim() || null,
       });
       message.success("Tạo kho thành công!");
-      navigate("/warehouse");
+      form.resetFields();
+      onSuccess();
     } catch (err: any) {
       message.error(err.response?.data?.message || "Tạo kho thất bại");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const onCancel = () => {
-    navigate("/warehouse");
-  };
-
   return (
-    <Card
+    <Modal
       title="Tạo kho mới"
-      style={{ maxWidth: 500, margin: "40px auto" }}
+      open={open}
+      onCancel={onCancel}
+      onOk={() => form.submit()}
+      confirmLoading={loading}
+      okText="Tạo kho"
+      cancelText="Hủy"
+      centered
+      destroyOnClose
     >
-      <Form form={form} layout="vertical" onFinish={onFinish}>
+      <Form 
+        form={form} 
+        layout="vertical" 
+        onFinish={onFinish}
+        style={{ marginTop: 16 }}
+      >
         <Form.Item
           label="Mã kho"
           name="code"
@@ -41,10 +59,7 @@ export default function WarehouseCreate() {
             },
           ]}
         >
-          <Input
-            placeholder="HCM001"
-            maxLength={20}
-          />
+          <Input placeholder="Ví dụ: HCM-01" maxLength={20} />
         </Form.Item>
 
         <Form.Item
@@ -52,23 +67,16 @@ export default function WarehouseCreate() {
           name="name"
           rules={[{ required: true, message: "Vui lòng nhập tên kho" }]}
         >
-          <Input placeholder="Kho Hồ Chí Minh 1" />
+          <Input placeholder="Ví dụ: Kho Tổng Miền Nam" />
         </Form.Item>
 
         <Form.Item label="Địa chỉ" name="address">
           <Input.TextArea
             rows={3}
-            placeholder="123 Đường ABC, Quận 1, TP.HCM..."
+            placeholder="Nhập địa chỉ chi tiết..."
           />
         </Form.Item>
-
-        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-          <Button onClick={onCancel}>Hủy</Button>
-          <Button type="primary" htmlType="submit">
-            Tạo kho
-          </Button>
-        </div>
       </Form>
-    </Card>
+    </Modal>
   );
 }

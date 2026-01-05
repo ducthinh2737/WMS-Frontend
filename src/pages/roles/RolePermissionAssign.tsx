@@ -1,6 +1,5 @@
-import { Card, Select, Checkbox, Button, message, Divider } from "antd";
+import { Modal, Checkbox, Button, message, Divider, Spin, Space, Tag } from "antd";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom"; // <-- import useParams
 import { roleApi } from "../../api/role.api";
 import { permissionApi } from "../../api/permission.api";
 
@@ -9,135 +8,141 @@ interface Permission {
   code: string;
 }
 
-interface Role {
-  id: number;
-  roleName: string;
-  permissions: Permission[];
+interface Props {
+  open: boolean;
+  roleId?: number;
+  roleName?: string;
+  onCancel: () => void;
+  onSuccess: () => void;
 }
 
-export default function RolePermissionAssign() {
-  const { id } = useParams<{ id: string }>(); // lấy role id từ route
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [roleId, setRoleId] = useState<number | null>(id ? Number(id) : null);
-
+export default function RolePermissionModal({ open, roleId, roleName, onCancel, onSuccess }: Props) {
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [original, setOriginal] = useState<number[]>([]);
   const [checked, setChecked] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
-  // Load all roles + permissions
   useEffect(() => {
-    const loadInit = async () => {
-      const [rolesRes, permsRes] = await Promise.all([
-        roleApi.getAll(),
-        permissionApi.getAll(),
-      ]);
-      setRoles(rolesRes.data);
-      setAllPermissions(permsRes.data);
-    };
-    loadInit();
-  }, []);
+    if (open) {
+      permissionApi.getAll().then(res => setAllPermissions(res.data));
+    }
+  }, [open]);
 
-  // Load role permissions khi roleId thay đổi (bao gồm từ route)
   useEffect(() => {
-    if (!roleId) return;
+    if (open && roleId) {
+      loadRolePermissions();
+    }
+  }, [open, roleId]);
 
-    const loadRole = async () => {
-      const res = await roleApi.get(roleId);
+  const loadRolePermissions = async () => {
+    setFetching(true);
+    try {
+      const res = await roleApi.get(Number(roleId));
       const permIds = res.data.permissions.map((p: Permission) => p.id);
-
       setOriginal(permIds);
       setChecked(permIds);
-    };
-
-    loadRole();
-  }, [roleId]);
+    } catch {
+      message.error("Không thể tải quyền của vai trò này");
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const onSubmit = async () => {
     if (!roleId) return;
-
     setLoading(true);
-
     const toAdd = checked.filter(id => !original.includes(id));
     const toRemove = original.filter(id => !checked.includes(id));
 
     try {
       await Promise.all([
-        ...toAdd.map(pid =>
-          roleApi.assignPermission({ roleId, permissionId: pid })
-        ),
-        ...toRemove.map(pid =>
-          roleApi.removePermission(roleId, pid)
-        ),
+        ...toAdd.map(pid => roleApi.assignPermission({ roleId, permissionId: pid })),
+        ...toRemove.map(pid => roleApi.removePermission(roleId, pid)),
       ]);
-
-      message.success("Permissions updated");
-      setOriginal(checked);
+      message.success("Cập nhật quyền thành công");
+      onSuccess();
     } catch {
-      message.error("Update failed");
+      message.error("Cập nhật thất bại");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card title="Assign Permissions to Role">
-      {/* Role selector */}
-      <Select
-        style={{ width: 300, marginBottom: 20 }}
-        placeholder="Select role"
-        options={roles.map(r => ({
-          value: r.id,
-          label: r.roleName,
-        }))}
-        value={roleId || undefined} // <-- dropdown tự chọn role hiện tại
-        onChange={setRoleId}
-      />
-
-      {roleId && (
-        <>
-          <Divider />
-
+    <Modal
+      title={
+        <div style={{ textAlign: 'center', width: '100%', paddingRight: '36px' }}>
+          <Space>
+            <span>Thiết lập quyền:</span>
+            <Tag color="blue" style={{ fontSize: '14px' }}>{roleName}</Tag>
+          </Space>
+        </div>
+      }
+      open={open}
+      onCancel={onCancel}
+      width={700} // Thu nhỏ lại một chút cho gọn
+      onOk={onSubmit}
+      confirmLoading={loading}
+      okText="Lưu thay đổi"
+      cancelText="Đóng"
+      centered // Đưa toàn bộ Modal ra giữa màn hình (theo chiều dọc)
+      destroyOnClose
+    >
+      <Spin spinning={fetching}>
+        <Divider style={{ fontSize: '12px', color: '#888' }}>
+          Danh sách quyền hạn
+        </Divider>
+        
+        {/* Container bọc ngoài để căn giữa Checkbox Group */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          width: '100%',
+          padding: '10px 0 20px 0'
+        }}>
           <Checkbox.Group
             value={checked}
             onChange={(v) => setChecked(v as number[])}
-            style={{ width: "100%" }}
+            style={{ width: "100%", maxWidth: '550px' }} // Giới hạn chiều rộng để căn giữa đẹp hơn
           >
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
+                gridTemplateColumns: "repeat(2, 1fr)", // Chia 2 cột để nhìn tập trung hơn
                 gap: "12px",
+                maxHeight: '350px',
+                overflowY: 'auto',
+                padding: '10px'
               }}
             >
               {allPermissions.map(p => (
-                <div
+                <label
                   key={p.id}
                   style={{
-                    border: "1px solid #d9d9d9",
-                    borderRadius: 6,
-                    padding: "8px 12px",
+                    border: "1px solid #f0f0f0",
+                    borderRadius: 8,
+                    padding: "10px 15px",
                     cursor: "pointer",
-                    transition: "all 0.2s",
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: checked.includes(p.id) ? '#e6f7ff' : '#fafafa',
+                    borderColor: checked.includes(p.id) ? '#91d5ff' : '#f0f0f0',
+                    transition: 'all 0.2s',
+                    boxShadow: checked.includes(p.id) ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                   }}
                 >
-                  <Checkbox value={p.id}>{p.code}</Checkbox>
-                </div>
+                  <Checkbox value={p.id}>
+                    <span style={{ marginLeft: 8, fontWeight: checked.includes(p.id) ? 600 : 400 }}>
+                        {p.code}
+                    </span>
+                  </Checkbox>
+                </label>
               ))}
             </div>
           </Checkbox.Group>
-
-          <Divider />
-
-          <Button
-            type="primary"
-            loading={loading}
-            onClick={onSubmit}
-          >
-            Save Changes
-          </Button>
-        </>
-      )}
-    </Card>
+        </div>
+      </Spin>
+    </Modal>
   );
 }

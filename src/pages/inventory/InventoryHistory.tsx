@@ -1,104 +1,88 @@
-import { Table, message, Select, Tag } from "antd";
+import { Modal, message, Typography, Tag } from "antd";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import { inventoryApi } from "../../api/inventory.api";
-import { productApi } from "../../api/product.api";
+import WmsTable from "../../components/Wmstable";
 import type { InventoryHistoryDto } from "../../types/inventory";
-import type { Product } from "../../types/product";
 import dayjs from "dayjs";
 
-export default function InventoryHistory() {
-  const { productId } = useParams<{ productId: string }>();
-  const productIdNum = productId ? Number(productId) : undefined;
+const { Text } = Typography;
 
+interface Props {
+  open: boolean;
+  productId?: string;
+  onCancel: () => void;
+}
+
+export default function InventoryHistoryModal({ open, productId, onCancel }: Props) {
   const [data, setData] = useState<InventoryHistoryDto[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<number | undefined>(
-    productIdNum
-  );
+  const [loading, setLoading] = useState(false);
 
-  // =========================
-  // LOAD PRODUCTS
-  // =========================
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const res = await productApi.getAll();
-        setProducts(res.data);
-      } catch {
-        message.error("Failed to fetch products");
-      }
-    };
-    loadProducts();
-  }, []);
-
-  // =========================
-  // FETCH INVENTORY HISTORY
-  // =========================
-  const fetchData = async (pid: number) => {
-    try {
-      const res = await inventoryApi.history(pid);
-      setData(res.data);
-    } catch {
-      message.error("Failed to fetch inventory history");
+    if (open && productId) {
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          // Ép kiểu productId sang number nếu Backend yêu cầu number
+          const res = await inventoryApi.history(Number(productId));
+          setData(res.data);
+        } catch {
+          message.error("Không thể tải lịch sử tồn kho");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    } else {
+      setData([]); // Reset dữ liệu khi đóng
     }
-  };
+  }, [open, productId]);
 
-  useEffect(() => {
-    if (selectedProduct) fetchData(selectedProduct);
-  }, [selectedProduct]);
-
-  // =========================
-  // TABLE COLUMNS
-  // =========================
   const columns = [
-    { title: "ID", dataIndex: "id" },
-    { title: "Warehouse", dataIndex: "warehouseId" },
-    { title: "Location", dataIndex: "locationId" },
+    { 
+      title: "Ngày tạo", 
+      dataIndex: "createdAt", 
+      width: 160,
+      render: (v: string) => dayjs(v).format("DD/MM/YYYY HH:mm") 
+    },
+    { 
+      title: "Loại", 
+      dataIndex: "actionType", 
+      width: 120,
+      render: (v: string) => <Tag color="blue">{v}</Tag> 
+    },
     {
-      title: "Qty Change",
+      title: "Thay đổi",
       dataIndex: "quantityChange",
-      render: (v: number) =>
-        v > 0 ? <span style={{ color: "green" }}>+{v}</span> : <span style={{ color: "red" }}>{v}</span>,
+      align: "right" as const,
+      width: 100,
+      render: (v: number) => (
+        <Text strong style={{ color: v > 0 ? "#52c41a" : "#f5222d" }}>
+          {v > 0 ? `+${v}` : v}
+        </Text>
+      ),
     },
-    {
-      title: "Action",
-      dataIndex: "actionType",
-      render: (v: string) => <Tag color="blue">{v}</Tag>,
-    },
-    { title: "Reference", dataIndex: "referenceCode" },
-    { title: "Note", dataIndex: "note" },
-    {
-      title: "Created At",
-      dataIndex: "createdAt",
-      render: (v: string) => dayjs(v).format("YYYY-MM-DD HH:mm:ss"),
-    },
+    { title: "Mã tham chiếu", dataIndex: "referenceCode", width: 130 },
+    { title: "Ghi chú", dataIndex: "note", ellipsis: true },
   ];
 
   return (
-    <div>
-      <h2>Inventory History</h2>
-
-      {/* PRODUCT SELECT */}
-      <div style={{ marginBottom: 16, width: 300 }}>
-        <Select
-          placeholder="Select product"
-          value={selectedProduct}
-          allowClear
-          onChange={(value) => setSelectedProduct(value)}
-          options={products.map((p) => ({
-            label: p.name,
-            value: p.id,
-          }))}
-        />
-      </div>
-
-      <Table
-        rowKey="id"
+    <Modal
+      title={`Lịch sử biến động - Sản phẩm: ${productId}`}
+      open={open}
+      onCancel={onCancel}
+      footer={null} // Chỉ xem, không cần nút OK/Cancel bên dưới
+      width={800}
+      centered
+    >
+      <WmsTable
+        loading={loading}
         columns={columns}
         dataSource={data}
-        pagination={{ pageSize: 20 }}
+        rowKey="id"
+        size="small"
+        pagination={{ pageSize: 10 }}
+        scroll={{ y: 400 }} // Giới hạn chiều cao để không bị tràn modal
       />
-    </div>
+    </Modal>
   );
 }

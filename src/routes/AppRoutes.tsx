@@ -86,9 +86,9 @@ import BrandEdit from "../pages/brands/BrandEdit";
 
 // PURCHASE
 import PurchaseList from "../pages/purchase/PurchaseList";
-import PurchaseForm from "../pages/purchase/PurchaseForm";
+import PurchaseCreateModal from "../pages/purchase/PurchaseForm";
 import GRList from "../pages/purchase/GoodsReceiptList";
-import GRCreate from "../pages/purchase/GoodsReceiptCreate";
+import GRCreate from "../pages/purchase/GRCountingModal";
 
 export default function AppRoutes() {
     return (
@@ -169,9 +169,7 @@ export default function AppRoutes() {
 
                 {/* PURCHASE */}
                 <Route path="purchase" element={<PurchaseList />} />
-                <Route path="purchase/form" element={<PurchaseForm />} />
                 <Route path="goodsreceipt" element={<GRList />} />
-                <Route path="goodsreceipt/form" element={<GRCreate />} />
                 
                 {/* SALES */}
                 <Route path="sales/orders" element={<SaleOrderList />} />

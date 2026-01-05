@@ -1,20 +1,30 @@
 import { useEffect, useState } from "react";
-import {
-  Button,
-  Input,
-  message,
-  Popconfirm,
-  Space,
-  Tag,
-  Tooltip,
-  Typography,
+import { 
+  Button, 
+  Input, 
+  message, 
+  Popconfirm, 
+  Space, 
+  Tag, 
+  // Tooltip,  <-- Xóa cái này vì không dùng (Lỗi 6133)
+  Typography 
 } from "antd";
-import { LockOutlined, UnlockOutlined } from "@ant-design/icons";
+import { 
+  LockOutlined, 
+  UnlockOutlined, 
+  EditOutlined, 
+  DeleteOutlined, 
+  EnvironmentOutlined, 
+  PlusOutlined 
+} from "@ant-design/icons";
 import { warehouseApi } from "../../api/warehouse.api";
 import WmsTable from "../../components/Wmstable";
 import PageHeader from "../../components/PageHeader";
 import { useNavigate } from "react-router-dom";
 import type { WarehouseDto } from "../../types/warehouse";
+
+import WarehouseCreateModal from "./WarehouseCreate";
+import WarehouseEditModal from "./WarehouseEdit";
 
 const { Text } = Typography;
 
@@ -27,6 +37,10 @@ export default function WarehouseList() {
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | undefined>();
 
   const load = async () => {
     setLoading(true);
@@ -41,28 +55,18 @@ export default function WarehouseList() {
     }
   };
 
-  useEffect(() => {
-    load();
-  }, [page, pageSize, search]);
+  useEffect(() => { load(); }, [page, pageSize, search]);
 
   const handleLock = async (id: string) => {
-    try {
-      await warehouseApi.lock(id);
-      message.success("Đã khóa kho");
-      load();
-    } catch {
-      message.error("Không thể khóa kho");
-    }
+    await warehouseApi.lock(id);
+    message.success("Đã khóa kho");
+    load();
   };
 
   const handleUnlock = async (id: string) => {
-    try {
-      await warehouseApi.unlock(id);
-      message.success("Đã mở khóa kho");
-      load();
-    } catch {
-      message.error("Không thể mở khóa");
-    }
+    await warehouseApi.unlock(id);
+    message.success("Đã mở khóa kho");
+    load();
   };
 
   const handleDelete = async (id: string) => {
@@ -71,196 +75,132 @@ export default function WarehouseList() {
       message.success("Đã xóa kho");
       load();
     } catch {
-      message.error("Không thể xóa kho (còn vị trí hoặc đang sử dụng)");
+      message.error("Không thể xóa kho");
     }
   };
 
-  // Hỗ trợ cả string và number cho status
-  const isWarehouseActive = (status: any): boolean => {
-    if (typeof status === "string") {
-      return status.toLowerCase() === "active";
-    }
-    if (typeof status === "number") {
-      return status === 1;
-    }
-    return false;
-  };
+  const isWarehouseActive = (status: any) => 
+    typeof status === "string" ? status.toLowerCase() === "active" : status === 1;
 
-  const getStatusTag = (status: WarehouseDto["status"]) => {
-    if (typeof status === "string") {
-      const s = status.toLowerCase();
-      if (s === "active") return <Tag color="green">Hoạt động</Tag>;
-      if (s === "locked") return <Tag color="red">Đã khóa</Tag>;
-      if (s === "maintenance") return <Tag color="orange">Bảo trì</Tag>;
-      return <Tag color="default">{status}</Tag>;
-    }
-    // nếu là số
-    if (status === 1) return <Tag color="green">Hoạt động</Tag>;
-    if (status === 3) return <Tag color="red">Đã khóa</Tag>;
-    if (status === 4) return <Tag color="orange">Bảo trì</Tag>;
+  const getStatusTag = (status: any) => {
+    const s = String(status).toLowerCase();
+    if (s === "active" || status === 1) return <Tag color="green">Hoạt động</Tag>;
+    if (s === "locked" || status === 3) return <Tag color="red">Đã khóa</Tag>;
+    if (s === "maintenance" || status === 4) return <Tag color="orange">Bảo trì</Tag>;
     return <Tag color="default">{status}</Tag>;
   };
 
   return (
-    <>
+    <div style={{ padding: 24 }}>
       <PageHeader
         title="Quản lý kho"
         button={
-          <Button type="primary" onClick={() => navigate("/warehouse/create")}>
-            + Tạo kho mới
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
+            Tạo kho mới
           </Button>
         }
       />
 
-      <Input.Search
-        placeholder="Tìm kiếm theo mã, tên kho hoặc ID..."
-        style={{ width: 400, marginBottom: 16 }}
-        allowClear
-        onSearch={(value) => {
-          setSearch(value.trim());
-          setPage(1);
-        }}
-      />
+      <div style={{ marginBottom: 16 }}>
+        <Input.Search
+          placeholder="Tìm kiếm kho..."
+          style={{ width: 400 }}
+          allowClear
+          onSearch={(v) => { setSearch(v.trim()); setPage(1); }}
+        />
+      </div>
 
       <WmsTable
         loading={loading}
         dataSource={data}
         rowKey="id"
-        scroll={{ x: 1300 }}
+        scroll={{ x: 1200 }}
         pagination={{
           current: page,
           pageSize,
           total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          onChange: (page: number, pageSize?: number) => {
-            setPage(page);
-            setPageSize(pageSize ?? 10);
+          // FIX LỖI 7006: Định nghĩa kiểu number cho p và ps
+          onChange: (p: number, ps: number) => { 
+            setPage(p); 
+            setPageSize(ps); 
           },
         }}
         columns={[
           {
             title: "ID",
             dataIndex: "id",
-            width: 110,
-            fixed: "left",
-            render: (id: string) => (
-              <Text
-                copyable={{ text: id }}
-                style={{ fontFamily: "monospace", fontSize: 11, color: "#666" }}
-              >
-                {id.slice(0, 8)}...
-              </Text>
-            ),
+            width: 100,
+            render: (id: string) => <Text copyable={{ text: id }} type="secondary">{id.slice(0, 8)}</Text>,
           },
-          {
-            title: "Mã kho",
-            dataIndex: "code",
-            width: 120,
-            sorter: true,
+          { 
+            title: "Mã kho", 
+            dataIndex: "code", 
+            width: 120, 
+            // FIX LỖI 7006: Định nghĩa kiểu string cho v
+            render: (v: string) => <b>{v}</b> 
           },
-          {
-            title: "Tên kho",
-            dataIndex: "name",
-            sorter: true,
-          },
-          {
-            title: "Địa chỉ",
-            dataIndex: "address",
-            ellipsis: true,
-            render: (text: string | null) => text || <Text type="secondary">—</Text>,
-          },
-          {
-            title: "Trạng thái",
-            dataIndex: "status",
-            width: 120,
-            align: "center",
-            render: getStatusTag,
-          },
-          // {
-          //   title: "Vị trí",
-          //   dataIndex: "locationCount",
-          //   width: 90,
-          //   align: "center",
-          //   render: (count: number | undefined) => count ?? 0,
-          // },
-          {
-            title: "Ngày tạo",
-            dataIndex: "createdAt",
-            width: 110,
-            render: (date: string) => new Date(date).toLocaleDateString("vi-VN"),
-          },
+          { title: "Tên kho", dataIndex: "name", ellipsis: true },
+          { title: "Địa chỉ", dataIndex: "address", ellipsis: true },
+          { title: "Trạng thái", dataIndex: "status", width: 120, align: "center", render: getStatusTag },
           {
             title: "Hành động",
-            width: 280,
+            width: 300,
             fixed: "right",
+            // FIX LỖI 7006: Định nghĩa kiểu WarehouseDto cho record, _ dùng kiểu any
             render: (_: any, record: WarehouseDto) => {
               const active = isWarehouseActive(record.status);
-
               return (
-                <Space size="small">
-                  <Button
-                    type="link"
-                    size="small"
-                    onClick={() => navigate(`/warehouse/edit/${record.id}`)}
+                <Space size="middle">
+                  <Button 
+                    size="small" 
+                    icon={<EditOutlined />} 
+                    onClick={() => { setSelectedId(record.id); setIsEditOpen(true); }}
                   >
                     Sửa
                   </Button>
 
                   {active ? (
-                    <Popconfirm
-                      title="Khóa kho này?"
-                      onConfirm={() => handleLock(record.id)}
-                    >
-                      <Button
-                        danger
-                        type="link"
-                        size="small"
-                        icon={<LockOutlined />}
-                      >
-                        Khóa
-                      </Button>
+                    <Popconfirm title="Khóa kho này?" onConfirm={() => handleLock(record.id)}>
+                      <Button danger size="small" icon={<LockOutlined />}>Khóa</Button>
                     </Popconfirm>
                   ) : (
-                    <Popconfirm
-                      title="Mở khóa kho?"
-                      onConfirm={() => handleUnlock(record.id)}
-                    >
-                      <Button
-                        type="link"
-                        size="small"
-                        icon={<UnlockOutlined />}
-                      >
-                        Mở khóa
-                      </Button>
+                    <Popconfirm title="Mở khóa?" onConfirm={() => handleUnlock(record.id)}>
+                      <Button size="small" icon={<UnlockOutlined />}>Mở</Button>
                     </Popconfirm>
                   )}
 
-                  <Popconfirm
-                    title="Xóa kho này? Không thể khôi phục!"
-                    onConfirm={() => handleDelete(record.id)}
-                  >
-                    <Button danger type="link" size="small">
-                      Xóa
-                    </Button>
-                  </Popconfirm>
-
                   <Button
-                    type="link"
                     size="small"
+                    type="dashed"
+                    icon={<EnvironmentOutlined />}
                     onClick={() => navigate(`/warehouse/${record.id}/locations`)}
                     disabled={!active}
                   >
-                    <Tooltip title={!active ? "Kho không hoạt động" : ""}>
-                      Vị trí
-                    </Tooltip>
+                    Vị trí
                   </Button>
+
+                  <Popconfirm title="Xóa kho?" onConfirm={() => handleDelete(record.id)}>
+                    <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                  </Popconfirm>
                 </Space>
               );
             },
           },
         ]}
       />
-    </>
+
+      <WarehouseCreateModal 
+        open={isCreateOpen} 
+        onCancel={() => setIsCreateOpen(false)} 
+        onSuccess={() => { setIsCreateOpen(false); load(); }} 
+      />
+
+      <WarehouseEditModal 
+        open={isEditOpen} 
+        warehouseId={selectedId} 
+        onCancel={() => setIsEditOpen(false)} 
+        onSuccess={() => { setIsEditOpen(false); load(); }} 
+      />
+    </div>
   );
 }

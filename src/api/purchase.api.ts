@@ -4,7 +4,8 @@ import type {
   GoodsReceiptDto,
   PurchaseQueryParams,
   GoodsReceiptCreateRequest,
-  PurchaseOrderCreateRequest
+  PurchaseOrderCreateRequest,
+  GoodsReceiptItemDto
 } from "../types/purchase";
 
 const baseUrl = "/purchase";
@@ -25,5 +26,6 @@ export const purchaseApi = {
   getGR: (id: string) => http.get<GoodsReceiptDto>(`${baseUrl}/gr/${id}`),
   getGRs: (params?: PurchaseQueryParams) => http.get<GoodsReceiptDto[]>(`${baseUrl}/gr`, { params }),
   createGR: (payload: GoodsReceiptCreateRequest) => http.post(`${baseUrl}/gr`, payload),
-  cancelGR: (id: string) => http.delete(`${baseUrl}/gr/${id}`)
+  cancelGR: (id: string) => http.delete(`${baseUrl}/gr/${id}`),
+  ReceiveItem: (payload: GoodsReceiptItemDto) => http.post(`${baseUrl}/receive-item`, payload),
 };

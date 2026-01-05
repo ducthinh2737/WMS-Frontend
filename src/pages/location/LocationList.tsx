@@ -1,255 +1,220 @@
 import { useEffect, useState } from "react";
-import {
-  Button,
-  Popconfirm,
-  message,
-  Tag,
-  Select,
-  Spin,
-  Empty,
-  Typography,
-  Space,
-} from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Button, Popconfirm, message, Tag, Select, Spin, Empty, Typography, Space } from "antd";
+import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { locationApi } from "../../api/location.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import WmsTable from "../../components/Wmstable";
 import PageHeader from "../../components/PageHeader";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import type { LocationDto } from "../../types/location";
+
+// Import các Modal thành phần
+import LocationCreateModal from "./LocationCreate";
+import LocationEditModal from "./LocationEdit";
 
 const { Text } = Typography;
 
-export default function LocationList() {
-  const navigate = useNavigate();
-  const { warehouseId } = useParams<{ warehouseId: string }>();
+// Mapping nhãn và màu sắc cho Loại vị trí
+export const LocationTypeLabels: Record<number, string> = {
+  1: "Khu nhận hàng",
+  2: "Khu lưu kho",
+  3: "Khu xuất hàng",
+  4: "Khu hàng lỗi",
+  5: "Khu trả hàng",
+};
 
+export const LocationTypeColors: Record<number, string> = {
+  1: "blue",
+  2: "green",
+  3: "purple",
+  4: "red",
+  5: "orange",
+};
+
+export default function LocationList() {
+  // Lấy warehouseId từ URL nếu người dùng đi từ danh sách kho sang
+  const { warehouseId: urlWarehouseId } = useParams<{ warehouseId: string }>();
+
+  // States dữ liệu
   const [data, setData] = useState<LocationDto[]>([]);
-  // CẬP NHẬT ĐÚNG TYPE: có thêm code
   const [warehouses, setWarehouses] = useState<{ id: string; name: string; code: string }[]>([]);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>(undefined);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>(urlWarehouseId);
   const [loading, setLoading] = useState(false);
 
-  // Load danh sách kho
+  // States điều khiển Modal
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>();
+
+  // 1. Load danh sách kho để đổ vào Selectbox
   useEffect(() => {
-    const loadWarehouses = async () => {
+    const fetchWarehouses = async () => {
       try {
         const res = await warehouseApi.query(1, 999);
-        const items = res.data.items.map((w: any) => ({
-          id: w.id,
-          name: w.name,
-          code: w.code || "N/A", // phòng trường hợp backend thiếu
-        }));
-        setWarehouses(items);
-      } catch {
-        message.error("Không tải được danh sách kho");
+        setWarehouses(res.data.items.map((w: any) => ({ 
+          id: w.id, 
+          name: w.name, 
+          code: w.code 
+        })));
+      } catch (err) {
+        message.error("Không thể tải danh sách kho");
       }
     };
-    loadWarehouses();
+    fetchWarehouses();
   }, []);
 
-  // Tự động chọn kho từ URL
-  useEffect(() => {
-    if (warehouseId && warehouses.length > 0) {
-      const found = warehouses.find((w) => w.id === warehouseId);
-      if (found) {
-        setSelectedWarehouseId(warehouseId);
-      } else {
-        message.warning("Kho không tồn tại hoặc đã bị xóa");
-      }
-    }
-  }, [warehouseId, warehouses]);
-
-  // Load locations khi chọn kho
-  useEffect(() => {
+  // 2. Load danh sách vị trí dựa trên kho được chọn
+  const loadLocations = async () => {
     if (!selectedWarehouseId) {
       setData([]);
       return;
     }
+    setLoading(true);
+    try {
+      const res = await locationApi.list(selectedWarehouseId);
+      setData(res.data);
+    } catch (err) {
+      message.error("Lỗi tải danh sách vị trí lưu trữ");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const loadLocations = async () => {
-      setLoading(true);
-      try {
-        const res = await locationApi.list(selectedWarehouseId);
-        setData(res.data);
-      } catch {
-        message.error("Không tải được danh sách vị trí");
-        setData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  useEffect(() => {
     loadLocations();
   }, [selectedWarehouseId]);
 
-  const getStatusTag = (isActive: boolean) =>
-    isActive ? (
-      <Tag color="green">Hoạt động</Tag>
-    ) : (
-      <Tag color="red">Ngừng hoạt động</Tag>
-    );
+  // 3. Xử lý xóa vị trí
+  const handleDelete = async (id: string) => {
+    try {
+      await locationApi.delete(selectedWarehouseId!, id);
+      message.success("Đã xóa vị trí thành công");
+      loadLocations();
+    } catch (err) {
+      message.error("Xóa thất bại. Vị trí có thể đang chứa hàng.");
+    }
+  };
 
-  const currentWarehouse = warehouses.find((w) => w.id === selectedWarehouseId);
+  const currentWarehouse = warehouses.find(w => w.id === selectedWarehouseId);
 
   return (
-    <>
+    <div style={{ padding: 24 }}>
       <PageHeader
-        title={
-          currentWarehouse
-            ? `Vị trí lưu trữ - ${currentWarehouse.name} [${currentWarehouse.code}]`
-            : "Vị trí lưu trữ"
-        }
+        title={currentWarehouse ? `Vị trí: ${currentWarehouse.name}` : "Vị trí lưu trữ"}
         button={
           selectedWarehouseId && (
-            <Button
-              type="primary"
-              onClick={() =>
-                navigate(`/warehouse/${selectedWarehouseId}/locations/create`)
-              }
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={() => setIsCreateOpen(true)}
             >
-              + Tạo vị trí mới
+              Thêm vị trí mới
             </Button>
           )
         }
       />
 
-      {/* Chọn kho */}
-      <div style={{ marginBottom: 20 }}>
-        <Text strong style={{ marginRight: 12 }}>Chọn kho:</Text>
-        <Select
-          showSearch
-          placeholder="Chọn kho để xem vị trí"
-          optionFilterProp="children"
-          value={selectedWarehouseId}
-          onChange={setSelectedWarehouseId}
-          style={{ width: 380 }}
-          loading={warehouses.length === 0}
-          filterOption={(input, option) =>
-            String(option?.children).toLowerCase().includes(input.toLowerCase())
-          }
-        >
-          {warehouses.map((w) => (
-            <Select.Option key={w.id} value={w.id}>
-              [{w.code}] {w.name}
-            </Select.Option>
-          ))}
-        </Select>
+      <div style={{ marginBottom: 20, background: '#f5f5f5', padding: '12px 16px', borderRadius: 8 }}>
+        <Space size="large">
+          <Space>
+            <Text strong>Kho quản lý:</Text>
+            <Select
+              showSearch
+              placeholder="Chọn kho để xem vị trí..."
+              value={selectedWarehouseId}
+              onChange={setSelectedWarehouseId}
+              style={{ width: 350 }}
+              options={warehouses.map(w => ({ 
+                value: w.id, 
+                label: `[${w.code}] ${w.name}` 
+              }))}
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+            />
+          </Space>
+          {currentWarehouse && (
+            <Tag color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>
+              Mã hệ thống: {currentWarehouse.id}
+            </Tag>
+          )}
+        </Space>
       </div>
 
-      {/* Bảng vị trí */}
       {loading ? (
-        <Spin tip="Đang tải vị trí..." style={{ display: "block", margin: "60px auto" }} />
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>
+          <Spin tip="Đang tải dữ liệu vị trí..." size="large" />
+        </div>
       ) : !selectedWarehouseId ? (
-        <Empty description="Vui lòng chọn một kho để xem danh sách vị trí" />
-      ) : data.length === 0 ? (
-        <Empty description="Kho này chưa có vị trí nào. Hãy tạo vị trí đầu tiên!" />
+        <Empty description="Vui lòng chọn một kho để bắt đầu quản lý vị trí lưu trữ" />
       ) : (
         <WmsTable
           dataSource={data}
           rowKey="id"
-          scroll={{ x: 1300 }}
-          pagination={{ pageSize: 20, showSizeChanger: true }}
+          scroll={{ x: 1000 }}
           columns={[
             {
               title: "Mã vị trí",
               dataIndex: "code",
-              width: 150,
+              width: 180,
               fixed: "left",
               sorter: (a: LocationDto, b: LocationDto) => a.code.localeCompare(b.code),
+              render: (code: string) => <Text copyable strong>{code}</Text>
             },
             {
-              title: "Kho",
-              dataIndex: "warehouseId",
-              width: 240,
-              render: (id: string) => {
-                const wh = warehouses.find((w) => w.id === id);
-                return wh ? (
-                  <Space>
-                    <Tag color="blue">{wh.code}</Tag>
-                    <Text strong>{wh.name}</Text>
-                  </Space>
-                ) : (
-                  <Text type="secondary">{id}</Text>
-                );
-              },
-            },
-            {
-              title: "Mô tả",
-              dataIndex: "description",
-              ellipsis: true,
-              render: (text: string | undefined) =>
-                text ? text : <Text type="secondary">—</Text>,
+              title: "Phân loại",
+              dataIndex: "type",
+              width: 150,
+              render: (type: number) => (
+                <Tag color={LocationTypeColors[type] || "default"}>
+                  {LocationTypeLabels[type] || "Không xác định"}
+                </Tag>
+              )
             },
             {
               title: "Trạng thái",
               dataIndex: "isActive",
-              width: 120,
+              width: 150,
               align: "center",
-              render: getStatusTag,
+              render: (active: boolean) => (
+                <Tag color={active ? "success" : "error"}>
+                  {active ? "Đang hoạt động" : "Ngừng sử dụng"}
+                </Tag>
+              )
             },
             {
-              title: "Ngày tạo",
-              dataIndex: "createdAt",
+              title: "Mô tả / Ghi chú",
+              dataIndex: "description",
+              ellipsis: true,
+              render: (text: string) => text || <Text type="secondary">---</Text>
+            },
+            {
+              title: "Thao tác",
               width: 160,
-              render: (date: string) =>
-                new Date(date).toLocaleString("vi-VN", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-            },
-            {
-              title: "Cập nhật lần cuối",
-              dataIndex: "updatedAt",
-              width: 160,
-              render: (date: string | undefined) =>
-                date ? (
-                  new Date(date).toLocaleString("vi-VN", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                ) : (
-                  <Text type="secondary">Chưa cập nhật</Text>
-                ),
-            },
-            {
-              title: "Hành động",
-              width: 140,
               fixed: "right",
-              render: (record: LocationDto) => (
-                <Space size="middle">
-                  <Button
-                    type="link"
-                    size="small"
+              align: "center",
+              render: (_: any, record: LocationDto) => (
+                <Space>
+                  <Button 
+                    type="link" 
+                    size="small" 
                     icon={<EditOutlined />}
-                    onClick={() =>
-                      navigate(
-                        `/warehouse/${selectedWarehouseId}/locations/edit/${record.id}`
-                      )
-                    }
+                    onClick={() => {
+                      setSelectedLocationId(record.id);
+                      setIsEditOpen(true);
+                    }}
                   >
                     Sửa
                   </Button>
-
-                  <Popconfirm
-                    title="Xóa vị trí này?"
-                    onConfirm={async () => {
-                      try {
-                        await locationApi.delete(selectedWarehouseId!, record.id);
-                        message.success("Đã xóa vị trí");
-                        const res = await locationApi.list(selectedWarehouseId!);
-                        setData(res.data);
-                      } catch {
-                        message.error("Xóa thất bại");
-                      }
-                    }}
+                  <Popconfirm 
+                    title="Xác nhận xóa vị trí?" 
+                    description="Dữ liệu đã xóa sẽ không thể khôi phục."
+                    onConfirm={() => handleDelete(record.id)}
+                    okText="Xóa"
+                    cancelText="Hủy"
+                    okButtonProps={{ danger: true }}
                   >
-                    <Button danger type="link" size="small" icon={<DeleteOutlined />}>
+                    <Button type="link" danger size="small" icon={<DeleteOutlined />}>
                       Xóa
                     </Button>
                   </Popconfirm>
@@ -259,6 +224,36 @@ export default function LocationList() {
           ]}
         />
       )}
-    </>
+
+      {/* Modal Thêm mới */}
+      {selectedWarehouseId && (
+        <LocationCreateModal
+          open={isCreateOpen}
+          warehouseId={selectedWarehouseId}
+          onCancel={() => setIsCreateOpen(false)}
+          onSuccess={() => { 
+            setIsCreateOpen(false); 
+            loadLocations(); 
+          }}
+        />
+      )}
+
+      {/* Modal Chỉnh sửa */}
+      {selectedWarehouseId && selectedLocationId && (
+        <LocationEditModal
+          open={isEditOpen}
+          warehouseId={selectedWarehouseId}
+          locationId={selectedLocationId}
+          onCancel={() => {
+            setIsEditOpen(false);
+            setSelectedLocationId(undefined);
+          }}
+          onSuccess={() => {
+            setIsEditOpen(false);
+            loadLocations();
+          }}
+        />
+      )}
+    </div>
   );
 }
