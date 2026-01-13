@@ -103,14 +103,14 @@ export default function AppRoutes() {
 
                 {/* ROLES */}
                 <Route path="roles" element={<RoleList />} />
-                <Route path="roles/create" element={<RoleCreate />} />
+                {/* <Route path="roles/create" element={<RoleCreate />} />
                 <Route path="roles/edit/:id" element={<RoleEdit />} />
-                <Route path="roles/assign-permission/:id" element={<RolePermissionAssign />} />
+                <Route path="roles/assign-permission/:id" element={<RolePermissionAssign />} /> */}
 
                 {/* PERMISSIONS */}
                 <Route path="permissions" element={<PermissionList />} />
                 <Route path="permissions/create" element={<PermissionCreate />} />
-                <Route path="permissions/edit/:id" element={<PermissionEdit />} />
+                {/* <Route path="permissions/edit/:id" element={<PermissionEdit />} /> */}
 
                 {/* AUTH */}
                 <Route path="auth/assign-role" element={<AssignRole />} />
@@ -123,8 +123,8 @@ export default function AppRoutes() {
 
                 {/* USER */}
                 <Route path="users" element={<UserList />} />
-                <Route path="users/edit/:id" element={<UpdateUser />} />
-                <Route path="users/create" element={<CreateUser />} />
+                {/* <Route path="users/edit/:id" element={<UpdateUser />} />
+                <Route path="users/create" element={<CreateUser />} /> */}
 
                 {/* CATEGORY */}
                 <Route path="category" element={<CategoryList />} />
@@ -153,19 +153,19 @@ export default function AppRoutes() {
 
                 {/* INVENTORY */}
                 <Route path="inventory" element={<InventoryList />} />
-                <Route path="inventory/adjust" element={<InventoryAdjustForm />} />
+                {/* <Route path="inventory/adjust" element={<InventoryAdjustForm />} />
                 <Route path="inventory/:productId/history" element={<InventoryHistory />} />
-                <Route path="inventory/history" element={<InventoryHistory />} />
+                <Route path="inventory/history" element={<InventoryHistory />} /> */}
 
                 {/* === WAREHOUSE MODULE === */}
                 <Route path="warehouse" element={<WarehouseList />} />
-                <Route path="warehouse/create" element={<WarehouseCreate />} />
-                <Route path="warehouse/edit/:id" element={<WarehouseEdit />} />
+                {/* <Route path="warehouse/create" element={<WarehouseCreate />} />
+                <Route path="warehouse/edit/:id" element={<WarehouseEdit />} /> */}
 
                 {/* Nested Locations */}
                 <Route path="warehouse/:warehouseId?/locations" element={<LocationList />} />
-                <Route path="warehouse/:warehouseId?/locations/create" element={<LocationCreate />} />
-                <Route path="warehouse/:warehouseId?/locations/edit/:id" element={<LocationEdit />} />
+                {/* <Route path="warehouse/:warehouseId?/locations/create" element={<LocationCreate />} />
+                <Route path="warehouse/:warehouseId?/locations/edit/:id" element={<LocationEdit />} /> */}
 
                 {/* PURCHASE */}
                 <Route path="purchase" element={<PurchaseList />} />
@@ -173,7 +173,7 @@ export default function AppRoutes() {
                 
                 {/* SALES */}
                 <Route path="sales/orders" element={<SaleOrderList />} />
-                <Route path="sales/orders/:id" element={<SaleOrderDetail />} />
+                {/* <Route path="sales/orders/:id" element={<SaleOrderDetail />} /> */}
                 <Route path="sales/orders/create" element={<SaleOrderCreate />} />
 
                 <Route path="sales/goods-issue" element={<GoodsIssueList />} />

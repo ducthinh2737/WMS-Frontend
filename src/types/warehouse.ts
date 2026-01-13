@@ -16,7 +16,9 @@ export interface WarehouseDto {
   updatedAt?: string | null;
   locationCount?: number;
 }
-
+export interface WarehouseByIdDto {
+  ProductId: number;
+}
 export interface WarehouseCreateDto {
   code: string;
   name: string;

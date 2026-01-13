@@ -4,14 +4,38 @@ export interface InventoryDto {
     warehouseId: string;
     locationId: string;
     productId: number;
-    onHandQuantity: number;         // trước là quantity
+    onHandQuantity: number;         
     lockedQuantity: number;
-    availableQuantity: number;      // onHand - locked
-    inTransitQuantity?: number;     // optional
+    availableQuantity: number;      
+    inTransitQuantity?: number;     
     createdAt: string;
     updatedAt?: string | null;
-}
 
+  locationType: number; // ✅ PHẢI là number
+}
+// src/types/inventory.ts (hoặc file types phù hợp)
+
+
+export const LocationType = {
+  Receiving: 1,
+  Storage: 2,
+  Staging: 3,
+  Shipping: 4
+} as const;
+
+export type LocationType = typeof LocationType[keyof typeof LocationType];
+
+export interface LocationQtyDto {
+  id: string;
+  warehouseId: string;
+  type: LocationType; // ⬅️ Dùng enum thay vì number
+  code: string;
+  availableQty: number;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
 export interface InventoryHistoryDto {
     id: string;
     warehouseId: string;
@@ -23,6 +47,21 @@ export interface InventoryHistoryDto {
     note?: string;
     createdAt: string;
 }
+// putaway.types.ts
+export interface PutawayDto {
+    productId: number;
+    warehouseId: string;
+    fromLocationId: string; // Receiving location
+    toLocationId: string;   // Storage location
+    qty: number;
+}
+
+// Optional: API response
+export interface PutawayResponse {
+    message: string;
+    success: boolean;
+}
+
 
 // Query params
 export interface InventoryQueryParams {
@@ -54,12 +93,12 @@ export interface InventoryLockRequest {
 
 // Enum actionType
 export const InventoryActionType = {
-    Receive: "Receive",
-    Issue: "Issue",
-    AdjustIncrease: "AdjustIncrease",
-    AdjustDecrease: "AdjustDecrease",
-    TransferIn: "TransferIn",
-    TransferOut: "TransferOut",
+    Receive: 1,
+    Issue: 2,
+    AdjustIncrease: 3,
+    AdjustDecrease: 4,
+    TransferIn: 5,
+    TransferOut: 6,
 } as const;
 
 export type InventoryActionType = typeof InventoryActionType[keyof typeof InventoryActionType];

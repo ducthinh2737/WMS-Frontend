@@ -180,10 +180,6 @@ export default function AdminLayout() {
   <Menu.Item key="sales-orders-list">
     <Link to="/sales/orders">Sale Orders List</Link>
   </Menu.Item>
-  <Menu.Item key="sales-orders-create">
-    <Link to="/sales/orders/create">Create Sale Order</Link>
-  </Menu.Item>
-
 
   <Menu.Divider />
 

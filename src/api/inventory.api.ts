@@ -4,7 +4,10 @@ import type {
     InventoryHistoryDto,
     InventoryQueryParams,
     InventoryAdjustRequest,
-    InventoryLockRequest
+    InventoryLockRequest,
+    PutawayDto,
+    PutawayResponse,
+    LocationQtyDto
 } from "../types/inventory";
 
 const baseUrl = "/inventory";
@@ -24,6 +27,15 @@ export const inventoryApi = {
     // Gộp lock/unlock thành 1 endpoint
     toggleLock: (payload: InventoryLockRequest) => 
         http.post(`${baseUrl}/lock-toggle`, payload),
+    putaway: (payload: PutawayDto) =>
+        http.post<PutawayResponse>(`${baseUrl}/putaway`, payload),
+    getAvailableLocations: (productId: number, warehouseId: string) =>
+    http.get<LocationQtyDto[]>(`${baseUrl}/available-locations`, {
+      params: { 
+        productId: productId,
+        warehouseId: warehouseId 
+      },
+    }),
 
     // Nếu muốn vẫn giữ 2 endpoint riêng
     // lock: (payload: InventoryLockRequest) => http.post(`${baseUrl}/lock-toggle`, { ...payload, lock: true }),
