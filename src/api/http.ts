@@ -2,7 +2,8 @@ import axios from "axios";
 import { storage } from "../utils/storage";
 
 const http = axios.create({
-    baseURL: "http://localhost:5201/api",
+    // Sử dụng biến môi trường của Vite, nếu không có thì mặc định về localhost
+    baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5201/api",
 });
 
 http.interceptors.request.use(config => {

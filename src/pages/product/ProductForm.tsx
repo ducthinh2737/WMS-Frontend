@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Button, Form, Input, Switch, Select } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { productApi } from "../../api/product.api.ts";
-import { useMasterData } from "../../hooks/usemasterdata.ts";
+import { useMasterData } from "../../hooks/useMasterData.ts";
 
 export default function ProductForm() {
     const { id } = useParams();
