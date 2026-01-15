@@ -1,4 +1,4 @@
-import { Button, message, Select, Typography } from "antd";
+import { Button, message, Select, Typography, Tag } from "antd";
 import { useEffect, useState, useCallback } from "react";
 import { SearchOutlined, PlusOutlined, HistoryOutlined } from "@ant-design/icons";
 import { inventoryApi } from "../../api/inventory.api";
@@ -133,34 +133,35 @@ export default function InventoryList() {
       <WmsTable
         loading={loading}
         dataSource={data}
-        rowKey={(record: InventoryDto) => `${record.productId}-${record.locationId}`}
-        scroll={{ x: 1000 }}
+        rowKey={(record: InventoryDto) => record.id} // Dùng ID duy nhất từ backend
+        scroll={{ x: 1200 }} // Tăng chiều rộng để đủ chỗ cho các cột mới
         columns={[
           {
-  title: "Mã sản phẩm",
-  dataIndex: "productId",
-  sorter: (a: InventoryDto, b: InventoryDto) => a.productId - b.productId,
-  sortDirections: ["ascend", "descend"],
-  render: (id: number) => <Text strong>{id}</Text>,
-},
-
+            title: "Sản phẩm",
+            key: "product",
+            width: 250,
+            fixed: "left",
+            render: (_: any, record: InventoryDto) => (
+              <div>
+                <Text strong>{record.productName}</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: "12px" }}>
+                  SKU: {record.productCode}
+                </Text>
+              </div>
+            ),
+          },
+          {
+            title: "Kho",
+            dataIndex: "warehouseName",
+            width: 150,
+            render: (name: string) => <Tag color="orange">{name}</Tag>,
+          },
           {
             title: "Vị trí",
             dataIndex: "locationCode",
-            render: (code: string, record: any) => code || record.locationId,
-          },
-          {
-            title: "Thực tồn",
-            dataIndex: "onHandQuantity",
-            align: "right",
             width: 120,
-          },
-          {
-            title: "Tạm khóa",
-            dataIndex: "lockedQuantity",
-            align: "right",
-            width: 120,
-            render: (v: number) => <Text type="danger">{v}</Text>
+            render: (code: string) => <Tag color="blue">{code}</Tag>,
           },
           {
             title: "Loại vị trí",
@@ -170,48 +171,64 @@ export default function InventoryList() {
             render: (type?: number) => LOCATION_TYPE_LABELS[type!] || "-",
           },
           {
+            title: "Thực tồn",
+            dataIndex: "onHandQuantity",
+            align: "right",
+            width: 100,
+            render: (v: number) => v.toLocaleString(),
+          },
+          {
+            title: "Tạm khóa",
+            dataIndex: "lockedQuantity",
+            align: "right",
+            width: 100,
+            render: (v: number) => <Text type="danger">{v > 0 ? v.toLocaleString() : 0}</Text>,
+          },
+          {
             title: "Khả dụng",
             dataIndex: "availableQuantity",
             align: "right",
-            width: 120,
-            render: (v: number) => <Text type="success" strong>{v}</Text>
+            width: 100,
+            render: (v: number) => (
+              <Text type="success" strong>
+                {v.toLocaleString()}
+              </Text>
+            ),
           },
           {
-  title: "Hành động",
-  width: 180,
-  fixed: "right" as const,
-  align: "center" as const,
-  render: (_: any, record: InventoryDto) => {
-    const canPutaway =
-      record.locationType === 1 && record.availableQuantity > 0;
+            title: "Hành động",
+            width: 180,
+            fixed: "right",
+            align: "center",
+            render: (_: any, record: InventoryDto) => {
+              const canPutaway = record.locationType === 1 && record.availableQuantity > 0;
 
-    return (
-      <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
-        <Button 
-          size="small" 
-          icon={<HistoryOutlined />}
-          onClick={() => {
-            setSelectedProductId(String(record.productId)); 
-            setIsHistoryOpen(true);
-          }}
-        >
-          Lịch sử
-        </Button>
+              return (
+                <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                  <Button
+                    size="small"
+                    icon={<HistoryOutlined />}
+                    onClick={() => {
+                      setSelectedProductId(String(record.productId));
+                      setIsHistoryOpen(true);
+                    }}
+                  >
+                    Lịch sử
+                  </Button>
 
-        {canPutaway && (
-          <Button
-            size="small"
-            type="primary"
-            onClick={() => handleOpenPutaway(record)}
-          >
-            Putaway
-          </Button>
-        )}
-      </div>
-    );
-  },
-}
-
+                  {canPutaway && (
+                    <Button
+                      size="small"
+                      type="primary"
+                      onClick={() => handleOpenPutaway(record)}
+                    >
+                      Putaway
+                    </Button>
+                  )}
+                </div>
+              );
+            },
+          },
         ]}
       />
 

@@ -69,15 +69,7 @@ export default function AdminLayout() {
             </Menu.Item>
             
             {/* AUTH */}
-            <Menu.SubMenu key="auth" icon={<TeamOutlined />} title="AUTH">
-              <Menu.Item key="auth-assign-role">
-                <Link to="/auth/assign-role">Assign Role</Link>
-              </Menu.Item>
-              <Menu.Item key="auth-assign-permission">
-                <Link to="/auth/assign-permission">Assign Permission</Link>
-              </Menu.Item>
-            </Menu.SubMenu>
-
+            
             {/* USERS */}
             <Menu.SubMenu key="users" icon={<UserOutlined />} title="USERS">
               <Menu.Item key="users-list">
@@ -133,9 +125,6 @@ export default function AdminLayout() {
             <Menu.SubMenu key="permissions" icon={<LockOutlined />} title="PERMISSIONS">
               <Menu.Item key="permissions-list">
                 <Link to="/permissions">Permission List</Link>
-              </Menu.Item>
-              <Menu.Item key="permissions-create">
-                <Link to="/permissions/create">Create Permission</Link>
               </Menu.Item>
             </Menu.SubMenu>
 

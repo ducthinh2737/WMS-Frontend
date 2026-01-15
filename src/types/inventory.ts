@@ -1,20 +1,22 @@
 // Inventory DTO (frontend)
+// src/types/inventory.ts
 export interface InventoryDto {
-    id: string;
-    warehouseId: string;
-    locationId: string;
-    productId: number;
-    onHandQuantity: number;         
-    lockedQuantity: number;
-    availableQuantity: number;      
-    inTransitQuantity?: number;     
-    createdAt: string;
-    updatedAt?: string | null;
-
-  locationType: number; // ✅ PHẢI là number
+  id: string;
+  warehouseId: string;
+  warehouseName: string;   // 🆕 Thêm mới
+  locationId: string;
+  locationCode: string;    // 🆕 Thêm mới
+  productId: number;
+  productCode: string;     // 🆕 Thêm mới (SKU)
+  productName: string;     // 🆕 Thêm mới
+  onHandQuantity: number;
+  lockedQuantity: number;
+  availableQuantity: number;
+  inTransitQuantity?: number;
+  locationType: number;
+  createdAt: string;
+  updatedAt?: string | null;
 }
-// src/types/inventory.ts (hoặc file types phù hợp)
-
 
 export const LocationType = {
   Receiving: 1,

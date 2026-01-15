@@ -7,22 +7,21 @@ import type { RoleDetailDto } from "../../types/role";
 import RoleCreateModal from "./RoleCreate"; 
 import RolePermissionModal from "./RolePermissionAssign";
 import RoleEditModal from "./RoleEdit";
-import { EditOutlined, DeleteOutlined, KeyOutlined, PlusOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import AssignRoleModal from "../auth/AssignRole"; // Đường dẫn tới file vừa sửa ở trên
+import { EditOutlined, DeleteOutlined, KeyOutlined, PlusOutlined, UserAddOutlined } from "@ant-design/icons";
 
 export default function RoleList() {
     const [data, setData] = useState<RoleDetailDto[]>([]);
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-    const [isAssignOpen, setIsAssignOpen] = useState(false);
-const [assignRoleData, setAssignRoleData] = useState<{id?: number, name?: string}>({});
 
-    // States cho Create Modal
+    // States cho các Modals
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-    // States cho Edit Modal
     const [isEditOpen, setIsEditOpen] = useState(false);
-    const [selectedRoleId, setSelectedRoleId] = useState<number | undefined>();
+    const [isPermissionOpen, setIsPermissionOpen] = useState(false);
+    const [isAssignUserOpen, setIsAssignUserOpen] = useState(false);
+
+    // State lưu dữ liệu role đang được chọn để gán/sửa
+    const [selectedRole, setSelectedRole] = useState<{id?: number, name?: string}>({});
 
     const load = async () => {
         setLoading(true);
@@ -36,26 +35,18 @@ const [assignRoleData, setAssignRoleData] = useState<{id?: number, name?: string
         }
     };
 
-    useEffect(() => {
-        load();
-    }, []);
+    useEffect(() => { load(); }, []);
 
     const handleDelete = async (id: number) => {
         try {
             await roleApi.delete(id);
             message.success("Đã xóa quyền");
             load();
-        } catch {
-            message.error("Xóa thất bại");
-        }
+        } catch { message.error("Xóa thất bại"); }
     };
 
     const columns = [
-        { 
-            title: "ID", 
-            dataIndex: "id", 
-            width: 70 
-        },
+        { title: "ID", dataIndex: "id", width: 70 },
         {
             title: "Tên quyền",
             dataIndex: "roleName",
@@ -64,35 +55,26 @@ const [assignRoleData, setAssignRoleData] = useState<{id?: number, name?: string
         {
             title: "Danh sách Permissions",
             dataIndex: "permissions",
-            render: (permissions: RoleDetailDto["Permissions"]) =>
-                permissions && permissions.length > 0 ? (
+            render: (permissions: any[]) =>
+                permissions?.length > 0 ? (
                     <Space wrap size={[0, 4]}>
                         {permissions.map(p => (
-                            <Tag color="green" key={p.id} bordered={false}>
-                                {p.code}
-                            </Tag>
+                            <Tag color="green" key={p.id} bordered={false}>{p.code}</Tag>
                         ))}
                     </Space>
-                ) : (
-                    <Tag color="default">Chưa gán quyền</Tag>
-                ),
-        },
-        {
-            title: "Ngày tạo",
-            dataIndex: "createdAt",
-            render: (v: string) => v ? new Date(v).toLocaleDateString("vi-VN") : "—",
+                ) : <Tag color="default">Chưa gán quyền</Tag>,
         },
         {
             title: "Thao tác",
             key: "action",
-            width: 320,
+            width: 380,
             render: (_: any, row: RoleDetailDto) => (
                 <Space size="small">
                     <Button
                         size="small"
                         icon={<EditOutlined />}
                         onClick={() => {
-                            setSelectedRoleId(row.id);
+                            setSelectedRole({ id: row.id, name: row.roleName });
                             setIsEditOpen(true);
                         }}
                     >
@@ -100,16 +82,28 @@ const [assignRoleData, setAssignRoleData] = useState<{id?: number, name?: string
                     </Button>
 
                     <Button
-                            size="small"
-                            type="dashed"
-                            icon={<KeyOutlined />}
-                            onClick={() => {
-                                setAssignRoleData({ id: row.id, name: row.roleName });
-                                setIsAssignOpen(true);
-                            }}
-                        >
-                            Gán quyền
-                        </Button>
+                        size="small"
+                        type="dashed"
+                        icon={<KeyOutlined />}
+                        onClick={() => {
+                            setSelectedRole({ id: row.id, name: row.roleName });
+                            setIsPermissionOpen(true);
+                        }}
+                    >
+                        Quyền
+                    </Button>
+
+                    <Button
+                        size="small"
+                        style={{ color: '#722ed1', borderColor: '#722ed1' }}
+                        icon={<UserAddOutlined />}
+                        onClick={() => {
+                            setSelectedRole({ id: row.id, name: row.roleName });
+                            setIsAssignUserOpen(true);
+                        }}
+                    >
+                        Gán User
+                    </Button>
 
                     <Popconfirm
                         title="Xóa quyền này sẽ ảnh hưởng đến người dùng đang giữ quyền. Tiếp tục?"
@@ -118,9 +112,7 @@ const [assignRoleData, setAssignRoleData] = useState<{id?: number, name?: string
                         cancelText="Hủy"
                         okButtonProps={{ danger: true }}
                     >
-                        <Button danger size="small" icon={<DeleteOutlined />}>
-                            Xóa
-                        </Button>
+                        <Button danger size="small" icon={<DeleteOutlined />}>Xóa</Button>
                     </Popconfirm>
                 </Space>
             ),
@@ -132,55 +124,43 @@ const [assignRoleData, setAssignRoleData] = useState<{id?: number, name?: string
             <PageHeader
                 title="Quản lý Vai trò (Roles)"
                 button={
-                    <Button 
-                        type="primary" 
-                        icon={<PlusOutlined />} 
-                        onClick={() => setIsCreateOpen(true)}
-                    >
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
                         Thêm vai trò mới
                     </Button>
                 }
             />
 
-            <WmsTable
-                dataSource={data}
-                rowKey="id"
-                columns={columns}
-                loading={loading}
+            <WmsTable dataSource={data} rowKey="id" columns={columns} loading={loading} />
+
+            {/* --- Danh sách các Modals --- */}
+            
+            <RoleCreateModal 
+                open={isCreateOpen} 
+                onCancel={() => setIsCreateOpen(false)} 
+                onSuccess={() => { setIsCreateOpen(false); load(); }} 
             />
 
-            {/* Popup Create */}
-            <RoleCreateModal 
-                open={isCreateOpen}
-                onCancel={() => setIsCreateOpen(false)}
-                onSuccess={() => {
-                    setIsCreateOpen(false);
-                    load();
-                }}
-            />
-            <RolePermissionModal 
-    open={isAssignOpen}
-    roleId={assignRoleData.id}
-    roleName={assignRoleData.name}
-    onCancel={() => setIsAssignOpen(false)}
-    onSuccess={() => {
-        setIsAssignOpen(false);
-        load(); // Để cập nhật lại các Tag permissions ở bảng chính
-    }}
-/>
-            {/* Popup Edit */}
             <RoleEditModal 
                 open={isEditOpen}
-                roleId={selectedRoleId}
-                onCancel={() => {
-                    setIsEditOpen(false);
-                    setSelectedRoleId(undefined);
-                }}
-                onSuccess={() => {
-                    setIsEditOpen(false);
-                    setSelectedRoleId(undefined);
-                    load();
-                }}
+                roleId={selectedRole.id}
+                onCancel={() => setIsEditOpen(false)}
+                onSuccess={() => { setIsEditOpen(false); load(); }}
+            />
+
+            <RolePermissionModal 
+                open={isPermissionOpen}
+                roleId={selectedRole.id}
+                roleName={selectedRole.name}
+                onCancel={() => setIsPermissionOpen(false)}
+                onSuccess={() => { setIsPermissionOpen(false); load(); }}
+            />
+
+            <AssignRoleModal 
+                open={isAssignUserOpen}
+                roleId={selectedRole.id}
+                roleName={selectedRole.name}
+                onCancel={() => setIsAssignUserOpen(false)}
+                onSuccess={() => { setIsAssignUserOpen(false); }} // Gán xong không cần load lại bảng role
             />
         </div>
     );

@@ -1,13 +1,7 @@
-import { Form, Select, Button, Card, message } from "antd";
+import { Form, Select, Button, Modal, message } from "antd";
 import { useEffect, useState } from "react";
 import { authApi } from "../../api/auth.api";
-import { roleApi } from "../../api/role.api";
 import { userApi } from "../../api/user.api";
-
-interface Role {
-    id: number;
-    roleName: string;
-}
 
 interface User {
     id: number;
@@ -15,90 +9,84 @@ interface User {
     fullName?: string;
 }
 
-export default function AssignRole() {
-    const [roles, setRoles] = useState<Role[]>([]);
+interface Props {
+    open: boolean;
+    roleId?: number;
+    roleName?: string;
+    onCancel: () => void;
+    onSuccess: () => void;
+}
+
+export default function AssignRoleModal({ open, roleId, roleName, onCancel, onSuccess }: Props) {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(false);
+    const [form] = Form.useForm();
 
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                const [roleRes, userRes] = await Promise.all([
-                    roleApi.getAll(),
-                    userApi.getAll(),
-                ]);
+        if (open) {
+            const fetchUsers = async () => {
+                try {
+                    const res = await userApi.getAll();
+                    setUsers(res.data);
+                } catch (err) {
+                    message.error("Không tải được danh sách người dùng");
+                }
+            };
+            fetchUsers();
+        }
+    }, [open]);
 
-                setRoles(roleRes.data);
-                setUsers(userRes.data);
-            } catch (err) {
-                message.error("Không tải được dữ liệu");
-            }
-        };
-
-        loadData();
-    }, []);
-
-    const onFinish = async (values: any) => {
+    const onFinish = async (values: { userId: number }) => {
+        if (!roleId) return;
         try {
             setLoading(true);
-            await authApi.assignRole(values.userId, values.roleId);
-            message.success("Gán Role thành công!");
+            await authApi.assignRole(values.userId, roleId);
+            message.success(`Đã gán quyền ${roleName} thành công!`);
+            form.resetFields();
+            onSuccess();
         } catch {
-            message.error("Gán Role thất bại!");
+            message.error("Gán quyền thất bại!");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 80 }}>
-            <Card title="Gán Role cho User" style={{ width: 500 }}>
-                <Form onFinish={onFinish} layout="vertical">
+        <Modal
+            title={<span>Gán người dùng vào nhóm: <b style={{ color: '#722ed1' }}>{roleName}</b></span>}
+            open={open}
+            onCancel={() => {
+                form.resetFields();
+                onCancel();
+            }}
+            footer={null}
+            destroyOnClose
+            width={450}
+        >
+            <Form form={form} onFinish={onFinish} layout="vertical" style={{ marginTop: 20 }}>
+                <Form.Item
+                    name="userId"
+                    label="Chọn User"
+                    rules={[{ required: true, message: "Vui lòng chọn user" }]}
+                >
+                    <Select
+                        showSearch
+                        placeholder="Tìm theo email hoặc tên..."
+                        optionFilterProp="label"
+                        options={users.map(u => ({
+                            value: u.id,
+                            label: `${u.email}${u.fullName ? " - " + u.fullName : ""}`,
+                        }))}
+                    />
+                </Form.Item>
 
-                    {/* USER */}
-                    <Form.Item
-                        name="userId"
-                        label="User"
-                        rules={[{ required: true, message: "Chọn user" }]}
-                    >
-                        <Select
-                            showSearch
-                            placeholder="Chọn user"
-                            optionFilterProp="label"
-                            options={users.map(u => ({
-                                value: u.id,
-                                label: `${u.email}${u.fullName ? " - " + u.fullName : ""}`,
-                            }))}
-                        />
-                    </Form.Item>
-
-                    {/* ROLE */}
-                    <Form.Item
-                        name="roleId"
-                        label="Role"
-                        rules={[{ required: true, message: "Chọn role" }]}
-                    >
-                        <Select
-                            showSearch
-                            placeholder="Chọn role"
-                            optionFilterProp="label"
-                            options={roles.map(r => ({
-                                value: r.id,
-                                label: r.roleName, // ✅ ĐÚNG FIELD
-                            }))}
-                        />
-                    </Form.Item>
-
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        block
-                        loading={loading}
-                    >
-                        Gán Role
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>
+                    <Button onClick={onCancel}>Hủy</Button>
+                    <Button type="primary" htmlType="submit" loading={loading} style={{ backgroundColor: '#722ed1', borderColor: '#722ed1' }}>
+                        Xác nhận gán
                     </Button>
-                </Form>
-            </Card>
-        </div>
+                </div>
+            </Form>
+        </Modal>
     );
 }

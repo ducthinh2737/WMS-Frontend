@@ -97,24 +97,29 @@ export default function GoodsIssueDetailModal({
   const handlePicking = async (item: GoodsIssueItemDtoForFrontend) => {
     if (!detail) return;
 
-    const items: PickingRequestDto["items"] = item.allocations
-      .map((alloc) => {
-        const qty = tempPicked[alloc.id] ?? alloc.pickedQty;
-        if (qty > 0) {
-          return {
-            id: alloc.id,
-            pickedQty: qty,
-            locationId: alloc.locationId,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean) as PickingRequestDto["items"];
+  const items = item.allocations
+    .map((alloc) => {
+      // Lấy giá trị từ ô nhập liệu
+      const qty = tempPicked[alloc.id];
+      
+      // CHỈ GỬI nếu: 
+      // 1. Có nhập giá trị mới (tempPicked có tồn tại id này)
+      // 2. VÀ dòng này chưa được hoàn thành (Status != Picked hoặc PickedQty cũ < AllocatedQty)
+      if (qty !== undefined && alloc.status !== 3) { 
+        return {
+          id: alloc.id,
+          pickedQty: qty,
+          locationId: alloc.locationId,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean) as PickingRequestDto["items"];
 
-    if (items.some((x) => !x.locationId)) {
-      message.error("Thiếu LocationId khi picking");
-      return;
-    }
+  if (items.length === 0) {
+    message.warning("Không có thay đổi nào để cập nhật");
+    return;
+  }
 
     const payload: PickingRequestDto = {
       id: item.id,
@@ -232,33 +237,48 @@ export default function GoodsIssueDetailModal({
             title: "Phân bổ",
             dataIndex: "allocatedQty",
           },
+          // Trong cột "Pick" của expandedRowRender
+{
+  title: "Pick",
+  render: (_, a) => {
+    // Giả sử status === 1 (hoặc một enum nào đó bạn định nghĩa cho Picked)
+    // Hoặc kiểm tra nếu đã có số lượng pick rồi thì khóa (tùy nghiệp vụ bạn muốn)
+    const isAlreadyPicked = a.status === 1 || a.pickedQty > 0; 
+
+    return (
+      <InputNumber
+        min={0}
+        max={a.allocatedQty}
+        step={1}
+        precision={0}
+        // Khóa nếu dòng này đã được xác nhận Picking thành công trước đó
+        disabled={isAlreadyPicked} 
+        value={tempPicked[a.id] ?? a.pickedQty}
+        onChange={(v) =>
+          setTempPicked((p) => ({ ...p, [a.id]: v ?? 0 }))
+        }
+      />
+    );
+  },
+},
           {
-            title: "Pick",
-            render: (_, a) => (
-              <InputNumber
-                min={0}
-                max={a.allocatedQty}
-                step={1}
-                precision={0}
-                value={tempPicked[a.id] ?? a.pickedQty}
-                onChange={(v) =>
-                  setTempPicked((p) => ({ ...p, [a.id]: v ?? 0 }))
-                }
-              />
-            ),
-          },
-          {
-            render: (_, a) =>
-              a.pickedQty < a.allocatedQty ? (
-                <Tooltip title="Pick hết">
-                  <Button
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => handlePickMaxSingle(a)}
-                    type="text"
-                  />
-                </Tooltip>
-              ) : null,
-          },
+  title: "Thao tác", // Thêm title cho rõ ràng
+  render: (_, a) => {
+    const isAlreadyPicked = a.status === 1 || a.pickedQty > 0;
+    
+    if (isAlreadyPicked) return <Tag color="green">Đã xong</Tag>;
+
+    return (
+      <Tooltip title="Pick hết">
+        <Button
+          icon={<CheckCircleOutlined />}
+          onClick={() => handlePickMaxSingle(a)}
+          type="text"
+        />
+      </Tooltip>
+    );
+  },
+},
         ]}
       />
 
