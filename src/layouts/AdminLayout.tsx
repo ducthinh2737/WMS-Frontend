@@ -95,9 +95,6 @@ export default function AdminLayout() {
               <Menu.Item key="transfer-list">
                 <Link to="/transfer">Transfer List</Link>
               </Menu.Item>
-              <Menu.Item key="transfer-create">
-                <Link to="/transfer/create">Create Transfer</Link>
-              </Menu.Item>
             </Menu.SubMenu>
             
             {/* STOCKTAKE

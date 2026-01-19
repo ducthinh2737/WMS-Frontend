@@ -1,36 +1,34 @@
-# --- Stage 1: Build the React/Vite application ---
+# ---------- Stage 1: Build ----------
 FROM node:20-alpine AS build
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json (or yarn.lock)
-# This step is done separately to leverage Docker's cache
-# If package*.json doesn't change, npm install won't re-run
+# Copy package files trước để tận dụng cache
 COPY package*.json ./
+
+# Build-time env cho Vite
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-# Install project dependencies
+# Install dependencies
 RUN npm install
 
-# Copy the rest of the application source code
+# Copy source code
 COPY . .
 
-# Build the React/Vite application
-# Assuming 'npm run build' generates output in the 'dist' directory
+# Build React/Vite
 RUN npm run build
 
-# --- Stage 2: Serve the built application with Nginx ---
-FROM nginx:stable-alpine AS final
 
-# Copy the built files from the 'build' stage into Nginx's HTML directory
-# Make sure this path matches the output directory of your 'npm run build' command
-# For Vite, it's typically 'dist'
+# ---------- Stage 2: Nginx ----------
+FROM nginx:stable-alpine
+
+# Copy Nginx config (FIX refresh 404 + proxy API)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy build output
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Expose port 80 (Nginx's default HTTP port)
 EXPOSE 80
 
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

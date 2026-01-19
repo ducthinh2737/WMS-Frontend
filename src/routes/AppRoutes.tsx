@@ -113,7 +113,6 @@ export default function AppRoutes() {
                 {/* <Route path="permissions/edit/:id" element={<PermissionEdit />} /> */}
 
                 {/* AUTH */}
-                <Route path="auth/assign-role" element={<AssignRole />} />
                 <Route path="auth/assign-permission" element={<AssignPermission />} />
 
                 {/* MASTER DATA → BRANDS */}
@@ -182,7 +181,6 @@ export default function AppRoutes() {
 
                 {/* TRANSFER */}
                 <Route path="transfer" element={<TransferList />} />
-                <Route path="transfer/create" element={<TransferCreate />} />
 
                 {/* STOCKTAKE */}
                 <Route path="stocktake" element={<StockTakeList />} />
