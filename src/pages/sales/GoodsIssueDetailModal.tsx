@@ -13,16 +13,29 @@ import {
   Divider,
   Tooltip,
   Progress,
+  Alert,
 } from "antd";
-import { ReloadOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import {
+  ReloadOutlined,
+  CheckCircleOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import { salesApi } from "../../api/sale.api";
 import type {
   GoodsIssueDetailDto,
   GoodsIssueItemDtoForFrontend,
-  IssueRequestDto,
   GoodsIssueAllocateDto,
+  IssueRequestDto,
   PickingRequestDto,
 } from "../../types/sale";
+
+/* ================= ENUM MAP ================= */
+const giaStatusMap: Record<number, { label: string; color: string }> = {
+  0: { label: "Planned", color: "default" },
+  1: { label: "Picking", color: "processing" },
+  2: { label: "Picked", color: "success" },
+  3: { label: "Cancelled", color: "error" },
+};
 
 const statusMap: Record<number, { label: string; color: string }> = {
   0: { label: "Pending", color: "default" },
@@ -45,10 +58,9 @@ export default function GoodsIssueDetailModal({
 }: Props) {
   const [detail, setDetail] = useState<GoodsIssueDetailDto | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [tempPicked, setTempPicked] = useState<Record<string, number>>({});
+  const [hasShippingError, setHasShippingError] = useState(false);
 
   /* ================= LOAD ================= */
   const loadDetail = async (silent = false) => {
@@ -57,6 +69,7 @@ export default function GoodsIssueDetailModal({
       const res = await salesApi.getGoodsIssueDetail(goodsIssueId);
       setDetail(res.data);
       setTempPicked({});
+      setHasShippingError(false);
     } catch {
       message.error("Không tải được thông tin phiếu xuất kho");
     } finally {
@@ -69,247 +82,133 @@ export default function GoodsIssueDetailModal({
   }, [goodsIssueId]);
 
   /* ================= HELPERS ================= */
+  const isInvalidLocation = (a: GoodsIssueAllocateDto) =>
+    !a.locationId || a.locationCode === "Chưa xác định";
+
+  const hasInvalidAllocation = (item: GoodsIssueItemDtoForFrontend) =>
+    item.allocations.some((a) => isInvalidLocation(a));
+
   const getTempTotalPicked = (item: GoodsIssueItemDtoForFrontend) =>
-    item.allocations.reduce((sum, alloc) => {
-      const current = tempPicked[alloc.id] ?? alloc.pickedQty;
-      return sum + (current > 0 ? current : 0);
+    item.allocations.reduce((sum, a) => {
+      if (isInvalidLocation(a)) return sum;
+      const v = tempPicked[a.id] ?? a.pickedQty;
+      return sum + (v > 0 ? v : 0);
     }, 0);
 
   const canPick = (item: GoodsIssueItemDtoForFrontend) =>
-    item.status < 3 && getTempTotalPicked(item) > item.pickedQty;
+    item.status < 3 &&
+    getTempTotalPicked(item) > item.pickedQty &&
+    !hasInvalidAllocation(item);
 
   const canIssue = (item: GoodsIssueItemDtoForFrontend) => {
     const remain = item.quantity - item.issuedQty;
-    return (
-      item.status < 3 &&
-      item.pickedQty > item.issuedQty &&
-      remain > 0
-    );
+    return item.status < 3 && item.pickedQty > item.issuedQty && remain > 0;
   };
 
-  /* ================= PICKING ================= */
+  /* ================= PICK ================= */
   const handlePickMaxSingle = (alloc: GoodsIssueAllocateDto) => {
-    setTempPicked((prev) => ({ ...prev, [alloc.id]: alloc.allocatedQty }));
+    if (isInvalidLocation(alloc)) return;
+    setTempPicked((p) => ({ ...p, [alloc.id]: alloc.allocatedQty }));
   };
-
-
 
   const handlePicking = async (item: GoodsIssueItemDtoForFrontend) => {
     if (!detail) return;
 
-  const items = item.allocations
-    .map((alloc) => {
-      // Lấy giá trị từ ô nhập liệu
-      const qty = tempPicked[alloc.id];
-      
-      // CHỈ GỬI nếu: 
-      // 1. Có nhập giá trị mới (tempPicked có tồn tại id này)
-      // 2. VÀ dòng này chưa được hoàn thành (Status != Picked hoặc PickedQty cũ < AllocatedQty)
-      if (qty !== undefined && alloc.status !== 3) { 
-        return {
-          id: alloc.id,
-          pickedQty: qty,
-          locationId: alloc.locationId,
-        };
-      }
-      return null;
-    })
-    .filter(Boolean) as PickingRequestDto["items"];
+    if (hasInvalidAllocation(item)) {
+      message.warning("Còn phân bổ chưa xác định vị trí, không thể Picking");
+      return;
+    }
 
-  if (items.length === 0) {
-    message.warning("Không có thay đổi nào để cập nhật");
-    return;
-  }
+    const items = item.allocations
+      .map((a) => {
+        if (isInvalidLocation(a) || a.status === 2) return null;
+        const qty = tempPicked[a.id];
+        if (qty !== undefined && qty !== a.pickedQty) {
+          return {
+            id: a.id,
+            pickedQty: qty,
+            locationId: a.locationId!,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as PickingRequestDto["items"];
 
-    const payload: PickingRequestDto = {
-      id: item.id,
-      goodsIssueId: detail.id,
-      productId: Number(item.productId),
-      items,
-    };
+    if (!items.length) {
+      message.warning("Không có thay đổi nào để Picking");
+      return;
+    }
 
     try {
       setActionLoading((p) => ({ ...p, [item.id]: true }));
-      await salesApi.picking(payload);
+      await salesApi.picking({
+        id: item.id,
+        goodsIssueId: detail.id,
+        productId: Number(item.productId),
+        items,
+      });
       message.success("Picking thành công");
       await loadDetail(true);
       onActionSuccess?.();
     } catch (err: any) {
-      message.error(err.response?.data || "Picking thất bại");
-    } finally {
+  const code = err.response?.data?.code;
+  const msg = err.response?.data?.message;
+
+  if (code === "WAREHOUSE_SHIPPING_LOCATION_NOT_CONFIGURED") {
+    Modal.warning({
+      title: "Không thể Picking",
+      content: msg,
+    });
+  } else {
+    message.error(msg || "Picking thất bại");
+  }
+}
+ finally {
       setActionLoading((p) => ({ ...p, [item.id]: false }));
     }
   };
 
   /* ================= ISSUE ================= */
   const handleIssue = async (item: GoodsIssueItemDtoForFrontend) => {
-  if (!detail) return;
+    const maxQty = Math.min(
+      item.quantity - item.issuedQty,
+      item.pickedQty - item.issuedQty
+    );
 
-  const maxIssueQty = Math.min(
-    item.quantity - item.issuedQty,
-    item.pickedQty - item.issuedQty
-  );
+    let issueQty = maxQty;
 
-  if (maxIssueQty <= 0) {
-    message.warning("Không còn số lượng để xuất kho");
-    return;
-  }
-
-  let issueQty = maxIssueQty; // default = max
-
-  Modal.confirm({
-    title: "Xác nhận xuất kho",
-    content: (
-      <div>
-        <p>
-          Sản phẩm: <strong>{item.productCode}</strong>
-        </p>
-
-        <p>
-          Có thể xuất tối đa: <strong>{maxIssueQty}</strong>
-        </p>
-
-        <Space>
-          <span>Số lượng xuất:</span>
+    Modal.confirm({
+      title: "Xác nhận xuất kho",
+      content: (
+        <Space direction="vertical">
+          <strong>
+            {item.productCode} - {item.productName}
+          </strong>
           <InputNumber
             min={1}
-            max={maxIssueQty}
-            step={1}
-            precision={0}
-            defaultValue={maxIssueQty}
-            onChange={(v) => {
-              issueQty = Number(v) || 0;
-            }}
+            max={maxQty}
+            defaultValue={maxQty}
+            onChange={(v) => (issueQty = Number(v))}
           />
         </Space>
-      </div>
-    ),
-    okText: "Xuất kho",
-    onOk: async () => {
-      if (issueQty <= 0 || issueQty > maxIssueQty) {
-        message.error("Số lượng xuất không hợp lệ");
-        return Promise.reject();
-      }
-
-      const payload: IssueRequestDto = {
-        goodsIssueItemId: item.id,
-        issuedQty: issueQty,
-      };
-
-      try {
-        setActionLoading((p) => ({
-          ...p,
-          [item.id + "-issue"]: true,
-        }));
-
-        await salesApi.issue(payload);
+      ),
+      onOk: async () => {
+        await salesApi.issue({
+          goodsIssueItemId: item.id,
+          issuedQty: issueQty,
+        });
         message.success("Xuất kho thành công");
         await loadDetail(true);
-        onActionSuccess?.();
-      } catch (err: any) {
-        message.error(err.response?.data || "Xuất kho thất bại");
-      } finally {
-        setActionLoading((p) => ({
-          ...p,
-          [item.id + "-issue"]: false,
-        }));
-      }
-    },
-  });
-};
-
+      },
+    });
+  };
 
   /* ================= UI ================= */
-  const expandedRowRender = (item: GoodsIssueItemDtoForFrontend) => (
-    <div style={{ padding: 12, background: "#fafafa" }}>
-      <Table
-        size="small"
-        pagination={false}
-        rowKey="id"
-        dataSource={item.allocations}
-        columns={[
-          {
-            title: "Vị trí",
-            dataIndex: "locationCode",
-            render: (_, a) => a.locationCode || "N/A",
-          },
-          {
-            title: "Phân bổ",
-            dataIndex: "allocatedQty",
-          },
-          // Trong cột "Pick" của expandedRowRender
-{
-  title: "Pick",
-  render: (_, a) => {
-    // Giả sử status === 1 (hoặc một enum nào đó bạn định nghĩa cho Picked)
-    // Hoặc kiểm tra nếu đã có số lượng pick rồi thì khóa (tùy nghiệp vụ bạn muốn)
-    const isAlreadyPicked = a.status === 1 || a.pickedQty > 0; 
-
-    return (
-      <InputNumber
-        min={0}
-        max={a.allocatedQty}
-        step={1}
-        precision={0}
-        // Khóa nếu dòng này đã được xác nhận Picking thành công trước đó
-        disabled={isAlreadyPicked} 
-        value={tempPicked[a.id] ?? a.pickedQty}
-        onChange={(v) =>
-          setTempPicked((p) => ({ ...p, [a.id]: v ?? 0 }))
-        }
-      />
-    );
-  },
-},
-          {
-  title: "Thao tác", // Thêm title cho rõ ràng
-  render: (_, a) => {
-    const isAlreadyPicked = a.status === 1 || a.pickedQty > 0;
-    
-    if (isAlreadyPicked) return <Tag color="green">Đã xong</Tag>;
-
-    return (
-      <Tooltip title="Pick hết">
-        <Button
-          icon={<CheckCircleOutlined />}
-          onClick={() => handlePickMaxSingle(a)}
-          type="text"
-        />
-      </Tooltip>
-    );
-  },
-},
-        ]}
-      />
-
-      <Divider />
-
-      <Space>
-        <Button
-          type="primary"
-          onClick={() => handlePicking(item)}
-          disabled={!canPick(item)}
-          loading={actionLoading[item.id]}
-        >
-          Xác nhận Picking
-        </Button>
-
-        <Button
-          danger
-          onClick={() => handleIssue(item)}
-          disabled={!canIssue(item)}
-          loading={actionLoading[item.id + "-issue"]}
-        >
-          Issue
-        </Button>
-      </Space>
-    </div>
-  );
-
   const overallProgress =
     detail && detail.items.length
-      ? detail.items.reduce((s, i) => s + i.issuedQty, 0) /
-        detail.items.reduce((s, i) => s + i.quantity, 0)
+      ? (detail.items.reduce((s, i) => s + i.issuedQty, 0) /
+          detail.items.reduce((s, i) => s + i.quantity, 0)) *
+        100
       : 0;
 
   return (
@@ -336,8 +235,8 @@ export default function GoodsIssueDetailModal({
                   {statusMap[detail.status]?.label}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Tiến độ" span={3}>
-                <Progress percent={Math.round(overallProgress * 100)} />
+              <Descriptions.Item span={3} label="Tiến độ">
+                <Progress percent={Math.round(overallProgress)} />
               </Descriptions.Item>
             </Descriptions>
 
@@ -361,4 +260,91 @@ export default function GoodsIssueDetailModal({
       </Spin>
     </>
   );
+
+  /* ================= EXPANDED ================= */
+  function expandedRowRender(item: GoodsIssueItemDtoForFrontend) {
+    return (
+      <div style={{ padding: 12, background: "#fafafa" }}>
+        {hasInvalidAllocation(item) && (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message="Có phân bổ chưa xác định vị trí"
+            description="Các dòng này đã bị khóa. Vui lòng cấu hình Location trước khi Picking."
+          />
+        )}
+
+        <Table
+          size="small"
+          pagination={false}
+          rowKey="id"
+          dataSource={item.allocations}
+          columns={[
+            {
+              title: "Vị trí",
+              render: (_, a) =>
+                isInvalidLocation(a) ? (
+                  <Tag color="warning">Chưa xác định</Tag>
+                ) : (
+                  a.locationCode
+                ),
+            },
+            { title: "Phân bổ", dataIndex: "allocatedQty" },
+            { title: "Đã Pick", dataIndex: "pickedQty" },
+                      {
+              title: "Pick",
+              render: (_, a) => (
+                <InputNumber
+                  min={0}
+                  max={a.allocatedQty}
+                  value={tempPicked[a.id] ?? a.pickedQty}
+                  disabled={a.status === 2 || isInvalidLocation(a)}
+                  onChange={(v) =>
+                    setTempPicked((p) => ({ ...p, [a.id]: v ?? 0 }))
+                  }
+                />
+              ),
+            },
+            {
+              title: "Thao tác",
+              render: (_, a) =>
+                isInvalidLocation(a) ? (
+                  <Tag color="warning">Chưa có vị trí</Tag>
+                ) : a.status === 2 ? (
+                  <Tag color="success">Đã Pick</Tag>
+                ) : (
+                  <Button
+                    icon={<CheckCircleOutlined />}
+                    type="text"
+                    onClick={() => handlePickMaxSingle(a)}
+                  />
+                ),
+            },
+          ]}
+        />
+
+        <Divider />
+
+        <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+          <Button
+            type="primary"
+            disabled={!canPick(item)}
+            loading={actionLoading[item.id]}
+            onClick={() => handlePicking(item)}
+          >
+            Xác nhận Picking
+          </Button>
+
+          <Button
+            danger
+            disabled={!canIssue(item)}
+            onClick={() => handleIssue(item)}
+          >
+            Issue / Xuất kho
+          </Button>
+        </Space>
+      </div>
+    );
+  }
 }

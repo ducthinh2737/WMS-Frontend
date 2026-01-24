@@ -92,7 +92,6 @@ export default function LocationEditModal({
             name="code"
             rules={[
               { required: true, message: "Vui lòng nhập mã vị trí" },
-              { pattern: /^[A-Z]\d-\d{2}-\d{2}$/, message: "Định dạng đúng: A1-01-03" },
             ]}
           >
             <Input placeholder="Ví dụ: A1-01-03" />

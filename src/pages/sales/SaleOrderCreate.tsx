@@ -11,27 +11,28 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 import { DeleteOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+
 import { salesApi } from "../../api/sale.api";
 import { customerApi } from "../../api/customer.api";
-import type { ColumnsType } from 'antd/es/table';  // Import kiểu ColumnsType
-import { productApi } from "../../api/product.api";
 import { inventoryApi } from "../../api/inventory.api";
 import { warehouseApi } from "../../api/warehouse.api";
 
 const { Title } = Typography;
 
-/* ========= TYPES (khớp backend) ========= */
+/* ========= TYPES ========= */
 export interface SOItem {
   productId: number;
   productName: string;
-  orderQty: number;       // Phải là orderQty
-  price: number;          // Phải là price
-  warehouseId: string;    // Bắt buộc
+  orderQty: number;
+  price: number;
+  warehouseId: string;
 }
 
 interface Inventory {
   id: string;
   productId: number;
+  productName: string;
   warehouseId: string;
   availableQuantity: number;
 }
@@ -49,83 +50,91 @@ interface Props {
 /* ========= COMPONENT ========= */
 export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
   const [form] = Form.useForm();
+
   const [customers, setCustomers] = useState<{ id: number; name: string }[]>([]);
-  const [products, setProducts] = useState<{ id: number; name: string; price?: number }[]>([]);
+  const [products, setProducts] = useState<{ id: number; name: string }[]>([]);
   const [items, setItems] = useState<SOItem[]>([]);
   const [inventories, setInventories] = useState<Inventory[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseMap, setWarehouseMap] = useState<Record<string, string>>({});
   const [inventoryMap, setInventoryMap] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(false);
 
+  /* ========= LOAD ========= */
   useEffect(() => {
     loadCustomers();
     loadProducts();
     loadWarehouses();
   }, []);
 
-  /* ========= LOAD DATA ========= */
   const loadCustomers = async () => {
     try {
       const res = await customerApi.getAll();
       setCustomers(res.data || []);
     } catch {
-      message.error("Lỗi tải danh sách khách hàng");
+      message.error("Lỗi tải khách hàng");
     }
   };
 
   const loadProducts = async () => {
     try {
-      const res = await productApi.getAll();
-      setProducts(res.data || []);
+      // 🔥 chỉ lấy inventory của product type = Production
+      const invRes = await inventoryApi.getByProductType(1);
+      const invs: Inventory[] = invRes.data || [];
+      setInventories(invs);
 
-      const productIds = res.data.map((p) => p.id);
-      const invRes = await inventoryApi.query({ productIds });
-      setInventories(invRes.data || []);
-
-      // Tính tổng tồn kho mỗi sản phẩm (tất cả kho)
-      const map: Record<number, number> = {};
-      res.data.forEach((p) => {
-        const productInvs = invRes.data.filter((i) => i.productId === p.id);
-        map[p.id] = productInvs.reduce((sum, i) => sum + i.availableQuantity, 0);
+      // map product list
+      const map = new Map<number, { id: number; name: string }>();
+      invs.forEach((i) => {
+        if (!map.has(i.productId)) {
+          map.set(i.productId, {
+            id: i.productId,
+            name: i.productName,
+          });
+        }
       });
-      setInventoryMap(map);
+      setProducts(Array.from(map.values()));
+
+      // tổng tồn
+      const invTotal: Record<number, number> = {};
+      invs.forEach((i) => {
+        invTotal[i.productId] =
+          (invTotal[i.productId] || 0) + i.availableQuantity;
+      });
+      setInventoryMap(invTotal);
     } catch {
-      message.error("Lỗi tải sản phẩm / tồn kho");
+      message.error("Lỗi tải sản phẩm");
     }
   };
 
   const loadWarehouses = async () => {
     try {
-      const res = await warehouseApi.query(1, 1000, undefined, "name", true);
+      const res = await warehouseApi.query(1, 1000);
       const items = res.data?.items || [];
-      setWarehouses(items);
-
       const map: Record<string, string> = {};
-      items.forEach((w) => (map[w.id] = w.name));
+      items.forEach((w: Warehouse) => (map[w.id] = w.name));
       setWarehouseMap(map);
     } catch {
-      message.error("Lỗi tải danh sách kho");
+      message.error("Lỗi tải kho");
     }
   };
 
   /* ========= ITEM HANDLER ========= */
   const addItem = (productId: number) => {
     if (items.some((i) => i.productId === productId)) {
-      message.warning("Sản phẩm đã được thêm");
+      message.warning("Sản phẩm đã tồn tại");
       return;
     }
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
+    const p = products.find((x) => x.id === productId);
+    if (!p) return;
 
-    setItems([
-      ...items,
+    setItems((prev) => [
+      ...prev,
       {
         productId,
-        productName: product.name,
+        productName: p.name,
         orderQty: 1,
-        price: product.price || 0,
-        warehouseId: "", // Bắt buộc chọn sau
+        price: 0,
+        warehouseId: "",
       },
     ]);
   };
@@ -140,31 +149,33 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
   };
 
-  const calculateTotal = () =>
-    items.reduce((sum, i) => sum + i.orderQty * i.price, 0);
-
-  const getMaxQty = (item: SOItem): number => {
-    // Nếu muốn giới hạn SL theo tồn kho kho đã chọn
+  const getMaxQty = (item: SOItem) => {
     const inv = inventories.find(
-      (i) => i.productId === item.productId && i.warehouseId === item.warehouseId
+      (i) =>
+        i.productId === item.productId &&
+        i.warehouseId === item.warehouseId
     );
-    return inv ? inv.availableQuantity : 0;
+    return inv?.availableQuantity || 0;
   };
 
-  /* ========= TABLE COLUMNS ========= */
-const columns: ColumnsType<SOItem> = [    {
+  const totalAmount = items.reduce(
+    (s, i) => s + i.orderQty * i.price,
+    0
+  );
+
+  /* ========= TABLE ========= */
+  const columns: ColumnsType<SOItem> = [
+    {
       title: "Sản phẩm",
       dataIndex: "productName",
-      key: "productName",
       width: 220,
     },
     {
       title: "Kho xuất",
-      key: "warehouseId",
-      width: 280,
-      render: (_: any, record: SOItem) => {
+      width: 300,
+      render: (_, record) => {
         const productInvs = inventories.filter(
-          (inv) => inv.productId === record.productId
+          (i) => i.productId === record.productId
         );
 
         return (
@@ -172,13 +183,22 @@ const columns: ColumnsType<SOItem> = [    {
             style={{ width: "100%" }}
             placeholder="Chọn kho"
             value={record.warehouseId || undefined}
-            onChange={(val) => updateItem(record.productId, { warehouseId: val })}
+            onChange={(val) =>
+              updateItem(record.productId, {
+                warehouseId: val,
+                orderQty: 1,
+              })
+            }
             showSearch
             optionFilterProp="children"
           >
             {productInvs.map((inv) => (
-              <Select.Option key={inv.warehouseId} value={inv.warehouseId}>
-                {warehouseMap[inv.warehouseId] || `Kho ${inv.warehouseId}`} - Tồn: <strong>{inv.availableQuantity}</strong>
+              <Select.Option
+                key={`${record.productId}_${inv.warehouseId}`}
+                value={inv.warehouseId}
+              >
+                {warehouseMap[inv.warehouseId] || inv.warehouseId} – Tồn:{" "}
+                <strong>{inv.availableQuantity}</strong>
               </Select.Option>
             ))}
           </Select>
@@ -187,21 +207,20 @@ const columns: ColumnsType<SOItem> = [    {
     },
     {
       title: "Số lượng",
-      key: "orderQty",
       width: 140,
-      render: (_: any, record: SOItem) => {
+      render: (_, record) => {
         const max = getMaxQty(record);
         return (
           <InputNumber
             min={1}
             max={max || undefined}
-            style={{ width: "100%" }}
             value={record.orderQty}
-            onChange={(val) => {
-              if (val && val > max) {
-                message.warning(`Tồn kho tối đa tại kho này: ${max}`);
+            style={{ width: "100%" }}
+            onChange={(v) => {
+              if (v && v > max) {
+                message.warning(`Tồn kho tối đa: ${max}`);
               }
-              updateItem(record.productId, { orderQty: val || 1 });
+              updateItem(record.productId, { orderQty: v || 1 });
             }}
           />
         );
@@ -209,34 +228,33 @@ const columns: ColumnsType<SOItem> = [    {
     },
     {
       title: "Đơn giá",
-      key: "price",
       width: 140,
-      render: (_: any, record: SOItem) => (
+      render: (_, record) => (
         <InputNumber
           min={0}
-          style={{ width: "100%" }}
           value={record.price}
-          onChange={(val) => updateItem(record.productId, { price: val || 0 })}
+          style={{ width: "100%" }}
+          onChange={(v) =>
+            updateItem(record.productId, { price: v || 0 })
+          }
         />
       ),
     },
     {
       title: "Thành tiền",
-      key: "subtotal",
-      width: 140,
+      width: 150,
       align: "right",
-      render: (_: any, record: SOItem) =>
-        (record.orderQty * record.price).toLocaleString("vi-VN"),
+      render: (_, r) =>
+        (r.orderQty * r.price).toLocaleString("vi-VN"),
     },
     {
       title: "",
-      key: "action",
       width: 60,
-      render: (_: any, record: SOItem) => (
+      render: (_, r) => (
         <Button
           danger
           icon={<DeleteOutlined />}
-          onClick={() => removeItem(record.productId)}
+          onClick={() => removeItem(r.productId)}
         />
       ),
     },
@@ -247,40 +265,42 @@ const columns: ColumnsType<SOItem> = [    {
     try {
       await form.validateFields();
 
-      if (items.length === 0) {
-        return message.error("Vui lòng thêm ít nhất 1 sản phẩm");
+      if (!items.length) {
+        return message.error("Chưa có sản phẩm");
       }
 
-      const invalidItem = items.find((i) => !i.warehouseId);
-      if (invalidItem) {
-        return message.error(`Sản phẩm ${invalidItem.productName} chưa chọn kho`);
+      const invalid = items.find((i) => !i.warehouseId);
+      if (invalid) {
+        return message.error(
+          `Sản phẩm ${invalid.productName} chưa chọn kho`
+        );
       }
 
-      const overStock = items.find((i) => i.orderQty > getMaxQty(i));
-      if (overStock) {
-        return message.error(`Sản phẩm ${overStock.productName} vượt quá tồn kho tại kho đã chọn`);
+      const over = items.find((i) => i.orderQty > getMaxQty(i));
+      if (over) {
+        return message.error(
+          `Sản phẩm ${over.productName} vượt tồn kho`
+        );
       }
 
       setLoading(true);
 
-      const payload = {
+      await salesApi.create({
         customerId: form.getFieldValue("customerId"),
-        // KHÔNG gửi code - backend tự sinh
         items: items.map((i) => ({
           productId: i.productId,
           warehouseId: i.warehouseId,
           orderQty: i.orderQty,
           price: i.price,
         })),
-      };
+      });
 
-      await salesApi.create(payload);
-      message.success("Tạo đơn bán hàng thành công!");
+      message.success("Tạo đơn hàng thành công");
       form.resetFields();
       setItems([]);
       onSuccess?.();
-    } catch (err: any) {
-      message.error(err.response?.data?.message || "Lỗi tạo đơn hàng");
+    } catch (e: any) {
+      message.error(e.response?.data?.message || "Lỗi tạo đơn");
     } finally {
       setLoading(false);
     }
@@ -289,65 +309,70 @@ const columns: ColumnsType<SOItem> = [    {
   /* ========= RENDER ========= */
   return (
     <Form layout="vertical" form={form} onFinish={onFinish}>
-      <Title level={4}>Tạo đơn bán hàng mới</Title>
+      <Title level={4}>Tạo đơn bán hàng</Title>
 
-      <Space size="large" style={{ marginBottom: 24 }}>
-        <Form.Item
-          label="Khách hàng"
-          name="customerId"
-          rules={[{ required: true, message: "Vui lòng chọn khách hàng" }]}
-        >
-          <Select
-            showSearch
-            style={{ width: 320 }}
-            placeholder="Chọn khách hàng"
-            options={customers.map((c) => ({ value: c.id, label: c.name }))}
-          />
-        </Form.Item>
-      </Space>
+      <Form.Item
+        label="Khách hàng"
+        name="customerId"
+        rules={[{ required: true }]}
+      >
+        <Select
+          showSearch
+          style={{ width: 320 }}
+          options={customers.map((c) => ({
+            value: c.id,
+            label: c.name,
+          }))}
+        />
+      </Form.Item>
 
-      <Divider>Chi tiết sản phẩm</Divider>
+      <Divider />
 
       <Select
         showSearch
-        placeholder="Tìm và thêm sản phẩm..."
-        style={{ width: 400, marginBottom: 16 }}
+        style={{ width: 420, marginBottom: 16 }}
+        placeholder="Thêm sản phẩm"
+        value={null}
         options={products.map((p) => ({
           value: p.id,
-          label: `${p.name} (Giá: ${p.price?.toLocaleString() || "—"} | Tồn tổng: ${inventoryMap[p.id] || 0})`,
+          label: `${p.name} | Tồn: ${inventoryMap[p.id] || 0}`,
         }))}
         onChange={addItem}
-        value={null}
-        filterOption={(input, option) =>
-          (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+        filterOption={(i, o) =>
+          (o?.label ?? "").toLowerCase().includes(i.toLowerCase())
         }
       />
 
       <Table
-        columns={columns}
-        dataSource={items}
-        rowKey="productId"
-        pagination={false}
-        bordered
-        size="middle"
-        summary={() => (
-          <Table.Summary.Row>
-            <Table.Summary.Cell index={0} colSpan={4}>
-              <strong>Tổng cộng</strong>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={4} align="right">
-              <strong>{calculateTotal().toLocaleString("vi-VN", { style: "currency", currency: "VND" })}</strong>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={5} />
-          </Table.Summary.Row>
-        )}
-      />
+  rowKey="productId"
+  columns={columns}
+  dataSource={items}
+  pagination={false}
+  bordered
+  summary={() => (
+    <Table.Summary.Row>
+      <Table.Summary.Cell index={0} colSpan={4}>
+        <strong>Tổng cộng</strong>
+      </Table.Summary.Cell>
 
-      <div style={{ marginTop: 32, textAlign: "right" }}>
+      <Table.Summary.Cell index={4} align="right">
+        <strong>
+          {totalAmount.toLocaleString("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          })}
+        </strong>
+      </Table.Summary.Cell>
+
+      <Table.Summary.Cell index={5} />
+    </Table.Summary.Row>
+  )}
+/>
+      <div style={{ marginTop: 24, textAlign: "right" }}>
         <Space>
           <Button onClick={onCancel}>Hủy</Button>
           <Button type="primary" htmlType="submit" loading={loading}>
-            Tạo đơn hàng
+            Tạo đơn
           </Button>
         </Space>
       </div>

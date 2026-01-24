@@ -20,7 +20,7 @@ export interface GoodsIssueItemDto {
 
   quantity: number;     // ✅ SỐ LƯỢNG ISSUE LẦN NÀY (INT > 0)
   issued_Qty: number;   // thường = quantity
-
+  
   status?: number;
   createAt?: string;
   updateAt?: string;
@@ -71,6 +71,7 @@ export interface GoodsIssueAllocateDto {
   locationId: string;
   locationCode?: string;    // hiển thị cho người dùng
   locationName?: string;
+  
 }
 
 export interface GoodsIssueItemDtoForFrontend {
@@ -92,11 +93,13 @@ export interface GoodsIssueDetailDto {
   id: string;
   code: string;
   salesOrderCode: string;
+  shippingLocationId?: string | null;
   warehouseName: string;
   status: number;
   note?: string;
   items: GoodsIssueItemDtoForFrontend[];
 }
+
 
 
 

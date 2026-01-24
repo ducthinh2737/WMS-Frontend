@@ -1,53 +1,93 @@
 import { useEffect, useState } from "react";
-import { 
-  Button, 
-  Input, 
-  message, 
-  Popconfirm, 
-  Space, 
-  Tag, 
-  // Tooltip,  <-- Xóa cái này vì không dùng (Lỗi 6133)
-  Typography 
+import {
+  Button,
+  Input,
+  message,
+  Popconfirm,
+  Space,
+  Tag,
+  Typography,
+  Select,
 } from "antd";
-import { 
-  LockOutlined, 
-  UnlockOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  EnvironmentOutlined, 
-  PlusOutlined 
+import {
+  LockOutlined,
+  UnlockOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EnvironmentOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { warehouseApi } from "../../api/warehouse.api";
 import WmsTable from "../../components/Wmstable";
 import PageHeader from "../../components/PageHeader";
 import { useNavigate } from "react-router-dom";
-import type { WarehouseDto } from "../../types/warehouse";
+import type {
+  WarehouseDto,
+  WarehouseStatus,
+  WarehouseType,
+} from "../../types/warehouse";
+import {
+  normalizeWarehouseStatus,
+  normalizeWarehouseType,
+} from "../../utils/warehouse-normalize";
 
 import WarehouseCreateModal from "./WarehouseCreate";
 import WarehouseEditModal from "./WarehouseEdit";
 
 const { Text } = Typography;
 
+/* ===================== CONST ===================== */
+
+const warehouseTypeMap: Record<
+  WarehouseType,
+  { label: string; color: string }
+> = {
+  RawMaterial: { label: "Kho nguyên liệu", color: "blue" },
+  FinishedGoods: { label: "Kho thành phẩm", color: "green" },
+  Auxiliary: { label: "Kho phụ liệu", color: "gold" },
+  Chemical: { label: "Kho hóa chất", color: "red" },
+};
+
+const warehouseTypeOptions = [
+  { value: "RawMaterial", label: "Kho nguyên liệu" },
+  { value: "FinishedGoods", label: "Kho thành phẩm" },
+  { value: "Auxiliary", label: "Kho phụ liệu" },
+  { value: "Chemical", label: "Kho hóa chất" },
+];
+
+/* ===================== COMPONENT ===================== */
+
 export default function WarehouseList() {
   const navigate = useNavigate();
 
   const [data, setData] = useState<WarehouseDto[]>([]);
-  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [warehouseTypeFilter, setWarehouseTypeFilter] =
+    useState<WarehouseType | undefined>();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [selectedId, setSelectedId] = useState<string>();
+
+  /* ===================== LOAD ===================== */
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await warehouseApi.query(page, pageSize, search);
-      setData(res.data.items);
-      setTotal(res.data.total);
+      const res = await warehouseApi.query(1, 0, search, "name", true);
+
+      const normalized: WarehouseDto[] = res.data.items.map((w: any) => ({
+        ...w,
+        warehouseType: normalizeWarehouseType(w.warehouseType),
+        status: normalizeWarehouseStatus(w.status),
+      }));
+
+      setData(normalized);
     } catch {
       message.error("Không tải được danh sách kho");
     } finally {
@@ -55,7 +95,40 @@ export default function WarehouseList() {
     }
   };
 
-  useEffect(() => { load(); }, [page, pageSize, search]);
+  useEffect(() => {
+    load();
+  }, [search]);
+
+  /* ===================== HELPERS ===================== */
+
+  const isWarehouseActive = (status?: WarehouseStatus) =>
+    status === "Active";
+
+  const getStatusTag = (status?: WarehouseStatus) => {
+    if (!status) return <Tag>Không xác định</Tag>;
+
+    switch (status) {
+      case "Active":
+        return <Tag color="green">Hoạt động</Tag>;
+      case "Locked":
+        return <Tag color="red">Đã khóa</Tag>;
+      case "Maintenance":
+        return <Tag color="orange">Bảo trì</Tag>;
+      case "Inactive":
+        return <Tag>Ngừng hoạt động</Tag>;
+      default:
+        return <Tag>{status}</Tag>;
+    }
+  };
+
+  /* ===================== FILTER ===================== */
+
+  const filteredData = data.filter((w) => {
+    if (!warehouseTypeFilter) return true;
+    return w.warehouseType === warehouseTypeFilter;
+  });
+
+  /* ===================== ACTIONS ===================== */
 
   const handleLock = async (id: string) => {
     await warehouseApi.lock(id);
@@ -70,102 +143,136 @@ export default function WarehouseList() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await warehouseApi.delete(id);
-      message.success("Đã xóa kho");
-      load();
-    } catch {
-      message.error("Không thể xóa kho");
-    }
+    await warehouseApi.delete(id);
+    message.success("Đã xóa kho");
+    load();
   };
 
-  const isWarehouseActive = (status: any) => 
-    typeof status === "string" ? status.toLowerCase() === "active" : status === 1;
-
-  const getStatusTag = (status: any) => {
-    const s = String(status).toLowerCase();
-    if (s === "active" || status === 1) return <Tag color="green">Hoạt động</Tag>;
-    if (s === "locked" || status === 3) return <Tag color="red">Đã khóa</Tag>;
-    if (s === "maintenance" || status === 4) return <Tag color="orange">Bảo trì</Tag>;
-    return <Tag color="default">{status}</Tag>;
-  };
+  /* ===================== RENDER ===================== */
 
   return (
     <div style={{ padding: 24 }}>
       <PageHeader
         title="Quản lý kho"
         button={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setIsCreateOpen(true)}
+          >
             Tạo kho mới
           </Button>
         }
       />
 
-      <div style={{ marginBottom: 16 }}>
+      {/* SEARCH & FILTER */}
+      <div style={{ marginBottom: 16, display: "flex", gap: 12 }}>
         <Input.Search
           placeholder="Tìm kiếm kho..."
-          style={{ width: 400 }}
+          style={{ width: 300 }}
           allowClear
-          onSearch={(v) => { setSearch(v.trim()); setPage(1); }}
+          onSearch={(v) => {
+            setSearch(v.trim());
+            setPage(1);
+          }}
+        />
+
+        <Select
+          placeholder="Loại kho"
+          allowClear
+          style={{ width: 220 }}
+          options={warehouseTypeOptions}
+          value={warehouseTypeFilter}
+          onChange={(value) => {
+            setWarehouseTypeFilter(value);
+            setPage(1);
+          }}
         />
       </div>
 
+      {/* TABLE */}
       <WmsTable
         loading={loading}
-        dataSource={data}
+        dataSource={filteredData}
         rowKey="id"
-        scroll={{ x: 1200 }}
         pagination={{
-          current: page,
-          pageSize,
-          total,
-          // FIX LỖI 7006: Định nghĩa kiểu number cho p và ps
-          onChange: (p: number, ps: number) => { 
-            setPage(p); 
-            setPageSize(ps); 
-          },
-        }}
+  current: page,
+  pageSize,
+  total: filteredData.length,
+  onChange: (p: number, ps: number) => {
+    setPage(p);
+    setPageSize(ps);
+  },
+}}
+
         columns={[
           {
             title: "ID",
             dataIndex: "id",
-            width: 100,
-            render: (id: string) => <Text copyable={{ text: id }} type="secondary">{id.slice(0, 8)}</Text>,
+            render: (id: string) => (
+              <Text copyable type="secondary">
+                {id.slice(0, 8)}
+              </Text>
+            ),
           },
-          { 
-            title: "Mã kho", 
-            dataIndex: "code", 
-            width: 120, 
-            // FIX LỖI 7006: Định nghĩa kiểu string cho v
-            render: (v: string) => <b>{v}</b> 
+          {
+            title: "Mã kho",
+            dataIndex: "code",
+            render: (v: string) => <b>{v}</b>,
           },
-          { title: "Tên kho", dataIndex: "name", ellipsis: true },
-          { title: "Địa chỉ", dataIndex: "address", ellipsis: true },
-          { title: "Trạng thái", dataIndex: "status", width: 120, align: "center", render: getStatusTag },
+          { title: "Tên kho", dataIndex: "name" },
+          {
+            title: "Loại kho",
+            dataIndex: "warehouseType",
+            align: "center",
+            render: (type?: WarehouseType) => {
+              if (!type) return <Tag>Không xác định</Tag>;
+              const t = warehouseTypeMap[type];
+              return <Tag color={t.color}>{t.label}</Tag>;
+            },
+          },
+          { title: "Địa chỉ", dataIndex: "address" },
+          {
+            title: "Trạng thái",
+            dataIndex: "status",
+            align: "center",
+            render: getStatusTag,
+          },
           {
             title: "Hành động",
-            width: 300,
             fixed: "right",
-            // FIX LỖI 7006: Định nghĩa kiểu WarehouseDto cho record, _ dùng kiểu any
             render: (_: any, record: WarehouseDto) => {
               const active = isWarehouseActive(record.status);
               return (
-                <Space size="middle">
-                  <Button 
-                    size="small" 
-                    icon={<EditOutlined />} 
-                    onClick={() => { setSelectedId(record.id); setIsEditOpen(true); }}
+                <Space>
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setSelectedId(record.id);
+                      setIsEditOpen(true);
+                    }}
                   >
                     Sửa
                   </Button>
 
                   {active ? (
-                    <Popconfirm title="Khóa kho này?" onConfirm={() => handleLock(record.id)}>
-                      <Button danger size="small" icon={<LockOutlined />}>Khóa</Button>
+                    <Popconfirm
+                      title="Khóa kho này?"
+                      onConfirm={() => handleLock(record.id)}
+                    >
+                      <Button danger size="small" icon={<LockOutlined />}>
+                        Khóa
+                      </Button>
                     </Popconfirm>
                   ) : (
-                    <Popconfirm title="Mở khóa?" onConfirm={() => handleUnlock(record.id)}>
-                      <Button size="small" icon={<UnlockOutlined />}>Mở</Button>
+                    <Popconfirm
+                      title="Mở khóa?"
+                      onConfirm={() => handleUnlock(record.id)}
+                    >
+                      <Button size="small" icon={<UnlockOutlined />}>
+                        Mở
+                      </Button>
                     </Popconfirm>
                   )}
 
@@ -173,14 +280,24 @@ export default function WarehouseList() {
                     size="small"
                     type="dashed"
                     icon={<EnvironmentOutlined />}
-                    onClick={() => navigate(`/warehouse/${record.id}/locations`)}
                     disabled={!active}
+                    onClick={() =>
+                      navigate(`/warehouse/${record.id}/locations`)
+                    }
                   >
                     Vị trí
                   </Button>
 
-                  <Popconfirm title="Xóa kho?" onConfirm={() => handleDelete(record.id)}>
-                    <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                  <Popconfirm
+                    title="Xóa kho?"
+                    onConfirm={() => handleDelete(record.id)}
+                  >
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                    />
                   </Popconfirm>
                 </Space>
               );
@@ -189,17 +306,24 @@ export default function WarehouseList() {
         ]}
       />
 
-      <WarehouseCreateModal 
-        open={isCreateOpen} 
-        onCancel={() => setIsCreateOpen(false)} 
-        onSuccess={() => { setIsCreateOpen(false); load(); }} 
+      {/* MODALS */}
+      <WarehouseCreateModal
+        open={isCreateOpen}
+        onCancel={() => setIsCreateOpen(false)}
+        onSuccess={() => {
+          setIsCreateOpen(false);
+          load();
+        }}
       />
 
-      <WarehouseEditModal 
-        open={isEditOpen} 
-        warehouseId={selectedId} 
-        onCancel={() => setIsEditOpen(false)} 
-        onSuccess={() => { setIsEditOpen(false); load(); }} 
+      <WarehouseEditModal
+        open={isEditOpen}
+        warehouseId={selectedId}
+        onCancel={() => setIsEditOpen(false)}
+        onSuccess={() => {
+          setIsEditOpen(false);
+          load();
+        }}
       />
     </div>
   );

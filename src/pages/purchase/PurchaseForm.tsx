@@ -49,19 +49,32 @@ export default function PurchaseCreateModal({ open, onCancel, onSuccess }: Props
     }
   };
 
-  const handleSupplierChange = async (supplierId: number) => {
-    setSelectedSupplierId(supplierId);
-    form.setFieldsValue({ items: [] });
-    try {
-      setLoadingProducts(true);
-      const prodRes = await productApi.getAllBySupplier(supplierId);
-      setProducts(prodRes.data);
-    } catch {
-      message.error("Không thể tải sản phẩm");
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
+
+const handleSupplierChange = async (supplierId: number) => {
+  setSelectedSupplierId(supplierId);
+  form.setFieldsValue({ items: [] });
+
+  try {
+    setLoadingProducts(true);
+
+    // 1️⃣ Lấy tất cả MATERIAL
+    const prodRes = await productApi.getAllByType(0); // 0 = Material
+
+    // 2️⃣ Lọc theo supplier
+    const filtered = prodRes.data.filter(
+  p => p.supplierId === Number(supplierId)
+  
+);
+
+
+    setProducts(filtered);
+  } catch {
+    message.error("Không thể tải sản phẩm");
+  } finally {
+    setLoadingProducts(false);
+  }
+};
+
 
   const handleSubmit = async () => {
     try {

@@ -1,22 +1,39 @@
-// src/types/product.ts
+export type ProductType = 0 | 1;
+
+
+export const PRODUCT_TYPE_OPTIONS = [
+    { label: "Nguyên vật liệu", value: 0 as ProductType },
+    { label: "Thành phẩm", value: 1 as ProductType },
+];
+
+export const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
+    0: "Nguyên vật liệu",
+    1: "Thành phẩm",
+};
+export interface ProductTypeDto {
+    type: ProductType;
+}
+
+
 export interface Product {
     id: number;
     code: string;
     name: string;
     description?: string;
+    type: ProductType;
     categoryId: number;
     unitId: number;
     brandId: number;
     supplierId: number;
     isActive: boolean;
-    createAt: string;
+    createdAt: string;
 }
-
 
 export interface CreateProductDto {
     code: string;
     name: string;
     description?: string;
+    type: ProductType;
     categoryId: number;
     unitId: number;
     brandId: number;
@@ -24,15 +41,17 @@ export interface CreateProductDto {
 }
 
 export interface UpdateProductDto {
-    name: string;
     code: string;
+    name: string;
     description?: string;
+    type: ProductType;
     categoryId: number;
     unitId: number;
     brandId: number;
     supplierId: number;
     isActive: boolean;
 }
+
 
 export interface ProductFilterDto {
     keyword?: string;

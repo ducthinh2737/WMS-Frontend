@@ -6,6 +6,8 @@ import { warehouseApi } from "../../api/warehouse.api";
 import { locationApi } from "../../api/location.api";
 import InventoryAdjustForm from "./InventoryAdjustForm";
 import PageHeader from "../../components/PageHeader";
+import InventoryLockActions from "./InventoryLockAction";
+
 import WmsTable from "../../components/Wmstable";
 import type { InventoryDto } from "../../types/inventory";
 import InventoryHistoryModal from "./InventoryHistory"; 
@@ -105,13 +107,23 @@ export default function InventoryList() {
       />
 
       <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
-        <Select
-          placeholder="Chọn Kho"
-          allowClear
-          style={{ width: 220 }}
-          options={warehouses}
-          onChange={handleWarehouseChange}
-        />
+<Select
+  placeholder="Tìm kho theo tên..."
+  allowClear
+  showSearch
+  style={{ width: 220 }}
+  options={warehouses}
+  onChange={handleWarehouseChange}
+  optionFilterProp="label"
+  filterOption={(input, option) => {
+    if (!option) return false;
+    return option.label
+      .toLowerCase()
+      .includes(input.toLowerCase());
+  }}
+/>
+
+
         <Select
           placeholder="Vị trí"
           allowClear
@@ -131,106 +143,119 @@ export default function InventoryList() {
       </div>
 
       <WmsTable
-        loading={loading}
-        dataSource={data}
-        rowKey={(record: InventoryDto) => record.id} // Dùng ID duy nhất từ backend
-        scroll={{ x: 1200 }} // Tăng chiều rộng để đủ chỗ cho các cột mới
-        columns={[
-          {
-            title: "Sản phẩm",
-            key: "product",
-            width: 250,
-            fixed: "left",
-            render: (_: any, record: InventoryDto) => (
-              <div>
-                <Text strong>{record.productName}</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: "12px" }}>
-                  SKU: {record.productCode}
-                </Text>
-              </div>
-            ),
-          },
-          {
-            title: "Kho",
-            dataIndex: "warehouseName",
-            width: 150,
-            render: (name: string) => <Tag color="orange">{name}</Tag>,
-          },
-          {
-            title: "Vị trí",
-            dataIndex: "locationCode",
-            width: 120,
-            render: (code: string) => <Tag color="blue">{code}</Tag>,
-          },
-          {
-            title: "Loại vị trí",
-            dataIndex: "locationType",
-            align: "center",
-            width: 120,
-            render: (type?: number) => LOCATION_TYPE_LABELS[type!] || "-",
-          },
-          {
-            title: "Thực tồn",
-            dataIndex: "onHandQuantity",
-            align: "right",
-            width: 100,
-            render: (v: number) => v.toLocaleString(),
-          },
-          {
-            title: "Tạm khóa",
-            dataIndex: "lockedQuantity",
-            align: "right",
-            width: 100,
-            render: (v: number) => <Text type="danger">{v > 0 ? v.toLocaleString() : 0}</Text>,
-          },
-          {
-            title: "Khả dụng",
-            dataIndex: "availableQuantity",
-            align: "right",
-            width: 100,
-            render: (v: number) => (
-              <Text type="success" strong>
-                {v.toLocaleString()}
-              </Text>
-            ),
-          },
-          {
-            title: "Hành động",
-            width: 180,
-            fixed: "right",
-            align: "center",
-            render: (_: any, record: InventoryDto) => {
-              const canPutaway = record.locationType === 1 && record.availableQuantity > 0;
-
-              return (
-                <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
-                  <Button
-                    size="small"
-                    icon={<HistoryOutlined />}
-                    onClick={() => {
-                      setSelectedProductId(String(record.productId));
-                      setIsHistoryOpen(true);
-                    }}
-                  >
-                    Lịch sử
-                  </Button>
-
-                  {canPutaway && (
-                    <Button
-                      size="small"
-                      type="primary"
-                      onClick={() => handleOpenPutaway(record)}
-                    >
-                      Putaway
-                    </Button>
-                  )}
-                </div>
-              );
-            },
-          },
-        ]}
+  loading={loading}
+  dataSource={data}
+  rowKey={(record: InventoryDto) => record.id}
+  scroll={{ x: 1200 }}
+  expandable={{
+    expandedRowRender: (record: InventoryDto) => (
+      <InventoryLockActions
+        record={record}
+        onSuccess={fetchData}
       />
+    ),
+    rowExpandable: (record: InventoryDto) =>
+      record.availableQuantity > 0 || record.lockedQuantity > 0,
+  }}
+  columns={[
+    {
+      title: "Sản phẩm",
+      key: "product",
+      width: 250,
+      fixed: "left",
+      render: (_: any, record: InventoryDto) => (
+        <div>
+          <Text strong>{record.productName}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: "12px" }}>
+            SKU: {record.productCode}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Kho",
+      dataIndex: "warehouseName",
+      width: 150,
+      render: (name: string) => <Tag color="orange">{name}</Tag>,
+    },
+    {
+      title: "Vị trí",
+      dataIndex: "locationCode",
+      width: 120,
+      render: (code: string) => <Tag color="blue">{code}</Tag>,
+    },
+    {
+      title: "Loại vị trí",
+      dataIndex: "locationType",
+      align: "center",
+      width: 120,
+      render: (type?: number) => LOCATION_TYPE_LABELS[type!] || "-",
+    },
+    {
+      title: "Thực tồn",
+      dataIndex: "onHandQuantity",
+      align: "right",
+      width: 100,
+      render: (v: number) => v.toLocaleString(),
+    },
+    {
+      title: "Tạm khóa",
+      dataIndex: "lockedQuantity",
+      align: "right",
+      width: 100,
+      render: (v: number) => (
+        <Text type="danger">{v > 0 ? v.toLocaleString() : 0}</Text>
+      ),
+    },
+    {
+      title: "Khả dụng",
+      dataIndex: "availableQuantity",
+      align: "right",
+      width: 100,
+      render: (v: number) => (
+        <Text type="success" strong>
+          {v.toLocaleString()}
+        </Text>
+      ),
+    },
+    {
+      title: "Hành động",
+      width: 160,
+      fixed: "right",
+      align: "center",
+      render: (_: any, record: InventoryDto) => {
+        const canPutaway =
+          record.locationType === 1 && record.availableQuantity > 0;
+
+        return (
+          <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+            <Button
+              size="small"
+              icon={<HistoryOutlined />}
+              onClick={() => {
+                setSelectedProductId(String(record.productId));
+                setIsHistoryOpen(true);
+              }}
+            >
+              Lịch sử
+            </Button>
+
+            {canPutaway && (
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => handleOpenPutaway(record)}
+              >
+                Putaway
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+  ]}
+/>
 
       <InventoryAdjustForm 
         open={isAdjustOpen} 

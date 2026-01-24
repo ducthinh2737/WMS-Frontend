@@ -1,43 +1,57 @@
 import http from "./http";
 import type {
-    InventoryDto,
-    InventoryHistoryDto,
-    InventoryQueryParams,
-    InventoryAdjustRequest,
-    InventoryLockRequest,
-    PutawayDto,
-    PutawayResponse,
-    LocationQtyDto
+  InventoryDto,
+  InventoryHistoryDto,
+  InventoryQueryParams,
+  InventoryAdjustRequest,
+  InventoryLockRequest,
+  PutawayDto,
+  PutawayResponse,
+  LocationQtyDto,
 } from "../types/inventory";
 
-const baseUrl = "/inventory";
+const baseUrl = "/inventory"; // ⬅️ KHỚP controller: api/inventories
 
 export const inventoryApi = {
-    get: (id: string) => http.get<InventoryDto>(`${baseUrl}/${id}`),
+  /* ===== INVENTORY BASIC ===== */
+  get: (id: string) =>
+    http.get<InventoryDto>(`${baseUrl}/${id}`),
 
-    query: (params: InventoryQueryParams) => 
-        http.get<InventoryDto[]>(baseUrl, { params }),
+  query: (params: InventoryQueryParams) =>
+    http.get<InventoryDto[]>(baseUrl, { params }),
 
-    history: (productId: number) => 
-        http.get<InventoryHistoryDto[]>(`${baseUrl}/product/${productId}/history`),
+  history: (productId: number) =>
+    http.get<InventoryHistoryDto[]>(
+      `${baseUrl}/product/${productId}/history`
+    ),
 
-    adjust: (payload: InventoryAdjustRequest) => 
-        http.post(`${baseUrl}/adjust`, payload),
+  adjust: (payload: InventoryAdjustRequest) =>
+    http.post(`${baseUrl}/adjust`, payload),
 
-    // Gộp lock/unlock thành 1 endpoint
-    toggleLock: (payload: InventoryLockRequest) => 
-        http.post(`${baseUrl}/lock-toggle`, payload),
-    putaway: (payload: PutawayDto) =>
-        http.post<PutawayResponse>(`${baseUrl}/putaway`, payload),
-    getAvailableLocations: (productId: number, warehouseId: string) =>
-    http.get<LocationQtyDto[]>(`${baseUrl}/available-locations`, {
-      params: { 
-        productId: productId,
-        warehouseId: warehouseId 
-      },
-    }),
+  /* ===== LOCK / UNLOCK ===== */
+  toggleLock: (payload: InventoryLockRequest) =>
+    http.post(`${baseUrl}/lock-toggle`, payload),
 
-    // Nếu muốn vẫn giữ 2 endpoint riêng
-    // lock: (payload: InventoryLockRequest) => http.post(`${baseUrl}/lock-toggle`, { ...payload, lock: true }),
-    // unlock: (payload: InventoryLockRequest) => http.post(`${baseUrl}/lock-toggle`, { ...payload, lock: false }),
+  /* ===== PUTAWAY ===== */
+  putaway: (payload: PutawayDto) =>
+    http.post<PutawayResponse>(`${baseUrl}/putaway`, payload),
+
+  /* ===== SALE ORDER – INVENTORY THEO KHO ===== */
+  getByProductType: (productType: number) =>
+    http.post<InventoryDto[]>(
+      `${baseUrl}/by-product-type`,
+      { productType }
+    ),
+
+  /* ===== PICKING – INVENTORY THEO LOCATION ===== */
+  getAvailableLocations: (productId: number, warehouseId: string) =>
+    http.get<LocationQtyDto[]>(
+      `${baseUrl}/available-locations`,
+      {
+        params: {
+          productId,
+          warehouseId,
+        },
+      }
+    ),
 };

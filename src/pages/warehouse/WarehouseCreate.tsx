@@ -1,4 +1,4 @@
-import { Button, Form, Input, message, Modal } from "antd";
+import { Button, Form, Input, message, Modal, Select } from "antd";
 import { useState } from "react";
 import { warehouseApi } from "../../api/warehouse.api";
 
@@ -11,24 +11,32 @@ interface Props {
 export default function WarehouseCreateModal({ open, onCancel, onSuccess }: Props) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const warehouseTypeOptions = [
+  { value: "RawMaterial", label: "Kho nguyên vật liệu" },
+  { value: "FinishedGoods", label: "Kho thành phẩm" },
+  { value: "Auxiliary", label: "Kho phụ liệu" },
+  { value: "Chemical", label: "Kho hóa chất" },
+];
 
   const onFinish = async (values: any) => {
-    setLoading(true);
-    try {
-      await warehouseApi.create({
-        code: values.code.trim().toUpperCase(),
-        name: values.name.trim(),
-        address: values.address?.trim() || null,
-      });
-      message.success("Tạo kho thành công!");
-      form.resetFields();
-      onSuccess();
-    } catch (err: any) {
-      message.error(err.response?.data?.message || "Tạo kho thất bại");
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    await warehouseApi.create({
+      code: values.code.trim().toUpperCase(),
+      name: values.name.trim(),
+      address: values.address?.trim() || null,
+      warehouseType: values.warehouseType, // 👈 thêm dòng này
+    });
+    message.success("Tạo kho thành công!");
+    form.resetFields();
+    onSuccess();
+  } catch (err: any) {
+    message.error(err.response?.data?.message || "Tạo kho thất bại");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <Modal
@@ -69,7 +77,16 @@ export default function WarehouseCreateModal({ open, onCancel, onSuccess }: Prop
         >
           <Input placeholder="Ví dụ: Kho Tổng Miền Nam" />
         </Form.Item>
-
+        <Form.Item
+          label="Loại kho"
+          name="warehouseType"
+          rules={[{ required: true, message: "Vui lòng chọn loại kho" }]}
+        >
+          <Select
+            placeholder="Chọn loại kho"
+            options={warehouseTypeOptions}
+          />
+        </Form.Item>
         <Form.Item label="Địa chỉ" name="address">
           <Input.TextArea
             rows={3}

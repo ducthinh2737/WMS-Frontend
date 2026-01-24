@@ -57,7 +57,7 @@ export default function GRCountingModal({
       for (const item of itemsToUpdate) {
         const payload: GoodsReceiptItemDto = {
           ...item,
-          received_Qty: item.received_Qty + newCounts[item.id],
+          received_Qty: newCounts[item.id],
         };
 
         await purchaseApi.ReceiveItem(payload);
