@@ -17,6 +17,7 @@ import { salesApi } from "../../api/sale.api";
 import { customerApi } from "../../api/customer.api";
 import { inventoryApi } from "../../api/inventory.api";
 import { warehouseApi } from "../../api/warehouse.api";
+import { productApi } from "../../api/product.api";
 
 const { Title } = Typography;
 
@@ -32,14 +33,8 @@ export interface SOItem {
 interface Inventory {
   id: string;
   productId: number;
-  productName: string;
   warehouseId: string;
   availableQuantity: number;
-}
-
-interface Warehouse {
-  id: string;
-  name: string;
 }
 
 interface Props {
@@ -56,13 +51,12 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
   const [items, setItems] = useState<SOItem[]>([]);
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [warehouseMap, setWarehouseMap] = useState<Record<string, string>>({});
-  const [inventoryMap, setInventoryMap] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(false);
 
   /* ========= LOAD ========= */
   useEffect(() => {
     loadCustomers();
-    loadProducts();
+    loadProductsAndInventory();
     loadWarehouses();
   }, []);
 
@@ -75,47 +69,51 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
     }
   };
 
-  const loadProducts = async () => {
+  const loadProductsAndInventory = async () => {
     try {
-      // 🔥 chỉ lấy inventory của product type = Production
+      const productRes = await productApi.getAllByType(1);
+      const productList = (productRes.data || []).filter((p: any) => p.isActive);
+
+      setProducts(
+        productList.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+        }))
+      );
+
       const invRes = await inventoryApi.getByProductType(1);
-      const invs: Inventory[] = invRes.data || [];
-      setInventories(invs);
-
-      // map product list
-      const map = new Map<number, { id: number; name: string }>();
-      invs.forEach((i) => {
-        if (!map.has(i.productId)) {
-          map.set(i.productId, {
-            id: i.productId,
-            name: i.productName,
-          });
-        }
-      });
-      setProducts(Array.from(map.values()));
-
-      // tổng tồn
-      const invTotal: Record<number, number> = {};
-      invs.forEach((i) => {
-        invTotal[i.productId] =
-          (invTotal[i.productId] || 0) + i.availableQuantity;
-      });
-      setInventoryMap(invTotal);
+      setInventories(invRes.data || []);
     } catch {
-      message.error("Lỗi tải sản phẩm");
+      message.error("Lỗi tải sản phẩm / tồn kho");
     }
   };
 
   const loadWarehouses = async () => {
     try {
-      const res = await warehouseApi.query(1, 1000);
-      const items = res.data?.items || [];
+      const res = await warehouseApi.getByWarehouseType({
+        warehousetype: 1,
+      });
+
+      const list = res.data?.result || [];
       const map: Record<string, string> = {};
-      items.forEach((w: Warehouse) => (map[w.id] = w.name));
+      list.forEach((w: any) => {
+        map[String(w.id)] = w.name; // ⚠️ ép string cho chắc
+      });
+
       setWarehouseMap(map);
     } catch {
-      message.error("Lỗi tải kho");
+      message.error("Lỗi tải kho thành phẩm");
     }
+  };
+
+  /* ========= HELPERS ========= */
+  const getMaxQty = (item: SOItem) => {
+    const inv = inventories.find(
+      (i) =>
+        i.productId === item.productId &&
+        i.warehouseId === item.warehouseId
+    );
+    return inv?.availableQuantity || 0;
   };
 
   /* ========= ITEM HANDLER ========= */
@@ -124,6 +122,7 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
       message.warning("Sản phẩm đã tồn tại");
       return;
     }
+
     const p = products.find((x) => x.id === productId);
     if (!p) return;
 
@@ -149,17 +148,8 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
   };
 
-  const getMaxQty = (item: SOItem) => {
-    const inv = inventories.find(
-      (i) =>
-        i.productId === item.productId &&
-        i.warehouseId === item.warehouseId
-    );
-    return inv?.availableQuantity || 0;
-  };
-
   const totalAmount = items.reduce(
-    (s, i) => s + i.orderQty * i.price,
+    (sum, i) => sum + i.orderQty * i.price,
     0
   );
 
@@ -172,10 +162,12 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
     },
     {
       title: "Kho xuất",
-      width: 300,
+      width: 320,
       render: (_, record) => {
         const productInvs = inventories.filter(
-          (i) => i.productId === record.productId
+          (i) =>
+            i.productId === record.productId &&
+            i.availableQuantity > 0
         );
 
         return (
@@ -189,15 +181,14 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
                 orderQty: 1,
               })
             }
-            showSearch
-            optionFilterProp="children"
           >
             {productInvs.map((inv) => (
               <Select.Option
                 key={`${record.productId}_${inv.warehouseId}`}
                 value={inv.warehouseId}
               >
-                {warehouseMap[inv.warehouseId] || inv.warehouseId} – Tồn:{" "}
+                {warehouseMap[inv.warehouseId] ?? inv.warehouseId}
+                {" – Tồn: "}
                 <strong>{inv.availableQuantity}</strong>
               </Select.Option>
             ))}
@@ -216,12 +207,9 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
             max={max || undefined}
             value={record.orderQty}
             style={{ width: "100%" }}
-            onChange={(v) => {
-              if (v && v > max) {
-                message.warning(`Tồn kho tối đa: ${max}`);
-              }
-              updateItem(record.productId, { orderQty: v || 1 });
-            }}
+            onChange={(v) =>
+              updateItem(record.productId, { orderQty: v || 1 })
+            }
           />
         );
       },
@@ -330,44 +318,49 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
 
       <Select
         showSearch
+        optionFilterProp="label"
         style={{ width: 420, marginBottom: 16 }}
-        placeholder="Thêm sản phẩm"
+        placeholder="Thêm sản phẩm thành phẩm"
         value={null}
-        options={products.map((p) => ({
-          value: p.id,
-          label: `${p.name} | Tồn: ${inventoryMap[p.id] || 0}`,
-        }))}
+        options={products
+          .filter((p) =>
+            inventories.some(
+              (i) =>
+                i.productId === p.id &&
+                i.availableQuantity > 0
+            )
+          )
+          .map((p) => ({
+            value: p.id,
+            label: p.name,
+          }))}
         onChange={addItem}
-        filterOption={(i, o) =>
-          (o?.label ?? "").toLowerCase().includes(i.toLowerCase())
-        }
       />
 
       <Table
-  rowKey="productId"
-  columns={columns}
-  dataSource={items}
-  pagination={false}
-  bordered
-  summary={() => (
-    <Table.Summary.Row>
-      <Table.Summary.Cell index={0} colSpan={4}>
-        <strong>Tổng cộng</strong>
-      </Table.Summary.Cell>
+        rowKey="productId"
+        columns={columns}
+        dataSource={items}
+        pagination={false}
+        bordered
+        summary={() => (
+          <Table.Summary.Row>
+            <Table.Summary.Cell index={0} colSpan={4}>
+              <strong>Tổng cộng</strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={4} align="right">
+              <strong>
+                {totalAmount.toLocaleString("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                })}
+              </strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={5} />
+          </Table.Summary.Row>
+        )}
+      />
 
-      <Table.Summary.Cell index={4} align="right">
-        <strong>
-          {totalAmount.toLocaleString("vi-VN", {
-            style: "currency",
-            currency: "VND",
-          })}
-        </strong>
-      </Table.Summary.Cell>
-
-      <Table.Summary.Cell index={5} />
-    </Table.Summary.Row>
-  )}
-/>
       <div style={{ marginTop: 24, textAlign: "right" }}>
         <Space>
           <Button onClick={onCancel}>Hủy</Button>

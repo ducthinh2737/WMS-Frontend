@@ -15,16 +15,19 @@ export default function SaleOrderCreateModal({
   return (
     <Modal
       open={open}
+      title="Tạo đơn bán hàng"
       onCancel={onClose}
       footer={null}
       width={1000}
       destroyOnClose
+      centered
+      maskClosable={false}
     >
       <SaleOrderCreateForm
-        onCancel={onClose} // ✅ hợp lệ với interface Props
+        onCancel={onClose}
         onSuccess={() => {
-          onSuccess();
-          onClose();
+          onSuccess(); // refresh list
+          onClose();   // đóng modal
         }}
       />
     </Modal>

@@ -1,13 +1,24 @@
-import { Form, Select, InputNumber, Button, message, Input, Space, Modal } from "antd";
+import {
+  Form,
+  Select,
+  InputNumber,
+  Button,
+  message,
+  Input,
+  Modal,
+  Alert,
+} from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import { purchaseApi } from "../../api/purchase.api";
 import { productApi } from "../../api/product.api";
 import { supplierApi } from "../../api/supplier.api";
 import { warehouseApi } from "../../api/warehouse.api";
+
 import type { Product } from "../../types/product";
 import type { SupplierDto } from "../../types/supplier";
-import type { WarehouseDto } from "../../types/warehouse";
+import type { WarehouseSimpleDto } from "../../api/warehouse.api";
 
 interface Props {
   open: boolean;
@@ -15,89 +26,135 @@ interface Props {
   onSuccess: () => void;
 }
 
-export default function PurchaseCreateModal({ open, onCancel, onSuccess }: Props) {
+export default function PurchaseCreateModal({
+  open,
+  onCancel,
+  onSuccess,
+}: Props) {
   const [form] = Form.useForm();
+  const items = Form.useWatch("items", form) || [];
+
+  /* ================= STATE ================= */
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
-  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseSimpleDto[]>([]);
+
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(
+    null
+  );
+
   const [loading, setLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
+  const [loadingWarehouse, setLoadingWarehouse] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
+  /* ================= HELPERS ================= */
+  const clearError = () => setSubmitError(null);
+
+  const calcItemTotal = (item: any) =>
+    (item?.quantity || 0) * (item?.price || 0);
+
+  const totalAmount = items.reduce(
+    (sum: number, i: any) => sum + calcItemTotal(i),
+    0
+  );
+
+  /* ================= EFFECT ================= */
   useEffect(() => {
     if (open) {
-      fetchInitialData();
+      loadInit();
     } else {
       form.resetFields();
       setSelectedSupplierId(null);
+      setSubmitError(null);
     }
   }, [open]);
 
-  const fetchInitialData = async () => {
+  /* ================= LOAD INIT ================= */
+  const loadInit = async () => {
     try {
       setLoading(true);
-      const [suppRes, whRes] = await Promise.all([
+
+      const [supRes, whRes] = await Promise.all([
         supplierApi.getAll(),
-        warehouseApi.query(1, 999),
+        warehouseApi.getByWarehouseType({
+          warehousetype: 0, // ✅ RawMaterial
+        }),
       ]);
-      setSuppliers(suppRes.data);
-      setWarehouses(whRes.data.items);
+
+      setSuppliers(supRes.data);
+
+      // BE đã filter → FE chỉ map
+      setWarehouses(
+        whRes.data.result.map((w) => ({
+          id: w.id,
+          name: w.name,
+        }))
+      );
     } catch {
-      message.error("Không thể tải dữ liệu");
+      message.error("Không thể tải dữ liệu khởi tạo");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ================= SUPPLIER CHANGE ================= */
+  const handleSupplierChange = async (supplierId: number) => {
+    clearError();
+    setSelectedSupplierId(supplierId);
+    form.setFieldsValue({ items: [] });
 
-const handleSupplierChange = async (supplierId: number) => {
-  setSelectedSupplierId(supplierId);
-  form.setFieldsValue({ items: [] });
+    try {
+      setLoadingProducts(true);
 
-  try {
-    setLoadingProducts(true);
+      // ✅ chỉ lấy sản phẩm nguyên vật liệu
+      const res = await productApi.getAllByType(0);
 
-    // 1️⃣ Lấy tất cả MATERIAL
-    const prodRes = await productApi.getAllByType(0); // 0 = Material
+      setProducts(res.data.filter((p) => p.supplierId === supplierId));
+    } catch {
+      message.error("Không thể tải sản phẩm");
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
-    // 2️⃣ Lọc theo supplier
-    const filtered = prodRes.data.filter(
-  p => p.supplierId === Number(supplierId)
-  
-);
-
-
-    setProducts(filtered);
-  } catch {
-    message.error("Không thể tải sản phẩm");
-  } finally {
-    setLoadingProducts(false);
-  }
-};
-
-
+  /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
+    setSubmitError(null);
+
     try {
       const values = await form.validateFields();
-      if (!values.items || values.items.length === 0) {
-        return message.error("Vui lòng thêm ít nhất một sản phẩm");
+
+      if (!values.items?.length) {
+        setSubmitError("Vui lòng thêm ít nhất một sản phẩm");
+        return;
       }
 
       setLoading(true);
+
       await purchaseApi.createPOs({
         ...values,
-        items: values.items.map((i: any) => ({ ...i, productId: String(i.productId) }))
+        items: values.items.map((i: any) => ({
+          ...i,
+          productId: String(i.productId),
+        })),
       });
-      message.success("Tạo đơn mua hàng thành công!");
+
+      message.success("Tạo đơn mua hàng thành công");
       onSuccess();
     } catch (err: any) {
-      if (err.errorFields) return; // Form validation failed
-      message.error(err?.response?.data?.message || "Tạo thất bại");
+      if (err?.errorFields) return;
+
+      setSubmitError(
+        err?.response?.data?.message ||
+          "Không thể tạo đơn mua hàng. Vui lòng kiểm tra lại dữ liệu."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  /* ================= RENDER ================= */
   return (
     <Modal
       title="Tạo đơn mua hàng mới"
@@ -109,50 +166,182 @@ const handleSupplierChange = async (supplierId: number) => {
       okText="Tạo đơn"
       cancelText="Hủy"
       destroyOnClose
+      maskClosable={false}
     >
+      {submitError && (
+        <Alert
+          type="error"
+          showIcon
+          message="Không thể tạo đơn mua hàng"
+          description={submitError}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       <Form form={form} layout="vertical">
-        <Space style={{ display: "flex" }} align="baseline">
-          <Form.Item label="Nhà cung cấp" name="supplierId" rules={[{ required: true }]} style={{ width: 300 }}>
-            <Select placeholder="Chọn nhà cung cấp" onChange={handleSupplierChange}>
-              {suppliers.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
+        {/* ===== HEADER ===== */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+          <Form.Item
+            label="Nhà cung cấp"
+            name="supplierId"
+            rules={[{ required: true }]}
+            style={{ width: 300 }}
+          >
+            <Select
+              showSearch
+              placeholder="Chọn nhà cung cấp"
+              optionFilterProp="label"
+              onChange={handleSupplierChange}
+            >
+              {suppliers.map((s) => (
+                <Select.Option key={s.id} value={s.id} label={s.name}>
+                  {s.name}
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
-          <Form.Item label="Mã PO" name="code" rules={[{ required: true }]} style={{ width: 300 }}>
+
+          <Form.Item
+            label="Mã PO"
+            name="code"
+            rules={[{ required: true }]}
+            style={{ width: 300 }}
+          >
             <Input placeholder="VD: PO20260001" />
           </Form.Item>
-        </Space>
+        </div>
 
+        {/* ===== ITEMS ===== */}
         <Form.List name="items">
           {(fields, { add, remove }) => (
             <>
-              {fields.map(({ key, name, ...restField }) => (
-                <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="baseline">
-                  <Form.Item {...restField} name={[name, "productId"]} rules={[{ required: true }]} >
-                    <Select style={{ width: 220 }} placeholder="Sản phẩm" loading={loadingProducts} disabled={!selectedSupplierId}>
-                      {products.map(p => <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>)}
-                    </Select>
-                  </Form.Item>
-                  <Form.Item {...restField} name={[name, "warehouseId"]} rules={[{ required: true }]} >
-                    <Select style={{ width: 180 }} placeholder="Kho nhận">
-                      {warehouses.map(w => <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>)}
-                    </Select>
-                  </Form.Item>
-                  <Form.Item {...restField} name={[name, "quantity"]} rules={[{ required: true }]} >
-                    <InputNumber min={1} placeholder="SL" style={{ width: 80 }} />
-                  </Form.Item>
-                  <Form.Item {...restField} name={[name, "price"]} rules={[{ required: true }]} >
-                    <InputNumber min={0} placeholder="Giá" style={{ width: 120 }} />
-                  </Form.Item>
-                  <MinusCircleOutlined onClick={() => remove(name)} style={{ color: "red" }} />
-                </Space>
-              ))}
-              <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />} disabled={!selectedSupplierId}>
+              {fields.map(({ key, name, ...rest }) => {
+                const item = items[name] || {};
+                const total = calcItemTotal(item);
+
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {/* Product */}
+                    <Form.Item
+                      {...rest}
+                      name={[name, "productId"]}
+                      rules={[{ required: true }]}
+                      style={{ width: 220, marginBottom: 0 }}
+                    >
+                      <Select
+                        showSearch
+                        placeholder="Sản phẩm"
+                        loading={loadingProducts}
+                        disabled={!selectedSupplierId}
+                        optionFilterProp="label"
+                      >
+                        {products.map((p) => (
+                          <Select.Option
+                            key={p.id}
+                            value={p.id}
+                            label={p.name}
+                          >
+                            {p.name}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+
+                    {/* Warehouse */}
+                    <Form.Item
+                      {...rest}
+                      name={[name, "warehouseId"]}
+                      rules={[{ required: true }]}
+                      style={{ width: 200, marginBottom: 0 }}
+                    >
+                      <Select
+                        showSearch
+                        placeholder="Kho vật liệu"
+                        optionFilterProp="label"
+                      >
+                        {warehouses.map((w) => (
+                          <Select.Option
+                            key={w.id}
+                            value={w.id}
+                            label={w.name}
+                          >
+                            {w.name}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+
+                    {/* Qty */}
+                    <Form.Item
+                      {...rest}
+                      name={[name, "quantity"]}
+                      rules={[{ required: true }]}
+                      style={{ width: 90, marginBottom: 0 }}
+                    >
+                      <InputNumber min={1} style={{ width: "100%" }} />
+                    </Form.Item>
+
+                    {/* Price */}
+                    <Form.Item
+                      {...rest}
+                      name={[name, "price"]}
+                      rules={[{ required: true }]}
+                      style={{ width: 120, marginBottom: 0 }}
+                    >
+                      <InputNumber min={0} style={{ width: "100%" }} />
+                    </Form.Item>
+
+                    {/* Total */}
+                    <div style={{ width: 140, textAlign: "right" }}>
+                      {total.toLocaleString("vi-VN")} ₫
+                    </div>
+
+                    <MinusCircleOutlined
+                      style={{ color: "red" }}
+                      onClick={() => remove(name)}
+                    />
+                  </div>
+                );
+              })}
+
+              <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() => add()}
+                block
+                disabled={!selectedSupplierId}
+              >
                 Thêm sản phẩm
               </Button>
             </>
           )}
         </Form.List>
       </Form>
+
+      {/* ===== TOTAL ===== */}
+      <div
+        style={{
+          marginTop: 24,
+          paddingTop: 16,
+          borderTop: "1px solid #f0f0f0",
+          textAlign: "right",
+          fontSize: 16,
+          fontWeight: 600,
+        }}
+      >
+        Tổng tiền:{" "}
+        <span style={{ color: "#1677ff", fontSize: 18 }}>
+          {totalAmount.toLocaleString("vi-VN")} ₫
+        </span>
+      </div>
     </Modal>
   );
 }

@@ -46,6 +46,7 @@ const statusMap: Record<number, { label: string; color: string }> = {
 };
 
 interface Props {
+    open: boolean;     
   goodsIssueId: string;
   onClose: () => void;
   onActionSuccess?: () => void;
@@ -151,18 +152,29 @@ export default function GoodsIssueDetailModal({
       await loadDetail(true);
       onActionSuccess?.();
     } catch (err: any) {
-  const code = err.response?.data?.code;
-  const msg = err.response?.data?.message;
+  const data = err.response?.data;
+  const code = data?.code;
+  const msg = data?.message || "";
 
-  if (code === "WAREHOUSE_SHIPPING_LOCATION_NOT_CONFIGURED") {
+  if (
+    code === "WAREHOUSE_SHIPPING_LOCATION_NOT_CONFIGURED" ||
+    msg.includes("chưa cấu hình vị trí xuất hàng")
+  ) {
     Modal.warning({
-      title: "Không thể Picking",
-      content: msg,
+      title: "❗ Không thể Picking",
+      content: (
+        <>
+          <b>Kho chưa được cấu hình vị trí xuất hàng.</b>
+          <br />
+          Vui lòng thiết lập <b>Location loại Shipping / Output</b> trước khi Picking.
+        </>
+      ),
     });
   } else {
-    message.error(msg || "Picking thất bại");
+    message.error(msg || "Picking không thành công");
   }
 }
+
  finally {
       setActionLoading((p) => ({ ...p, [item.id]: false }));
     }

@@ -1,5 +1,6 @@
 import http from "./http";
 import type { GoodsIssueItemDto, PickingRequestDto, IssueRequestDto } from "../types/sale";
+import type { GoodsIssueDto } from "../pages/sales/SaleOrderList";
 
 export const salesApi = {
   // QUERY
@@ -17,7 +18,15 @@ export const salesApi = {
   // REJECT
   reject: (id: string) => http.post(`/salesorder/${id}/reject`),
   queryGI: (params?: any) => http.get("/salesorder/goodsissues", { params }),
+ createProductionGI: (payload: {
+  warehouseId: string;
+  items: { productId: number; quantity: number }[];
+}) =>
+  http.post("/salesorder/production", payload),
 
+  // Approve GoodsIssue (Sale / Production)
+  approveGI: (giId: string) =>
+    http.post(`/salesorder/GI/${giId}/approve`),
   // ISSUE (NEW - match BE)
   issue: (payload: IssueRequestDto) =>
     http.post("/salesorder/issue", payload),

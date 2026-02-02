@@ -125,7 +125,7 @@ export default function GRCountingModal({
     >
       <div style={{ marginBottom: 16 }}>
         <Text strong>Mã PO: </Text>
-        <Text>{gr.poIds}</Text>
+        <Text>{gr.purchaseOrderId}</Text>
         <br />
         <Text strong>Kho nhận: </Text>
         <Text>{gr.warehouseId}</Text>
