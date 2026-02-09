@@ -1,20 +1,11 @@
 import {
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Button,
-  Space,
-  message,
-  Select,
+  Modal, Form, Input, InputNumber, Button, Space, message, Select, DatePicker, Row, Col, Divider
 } from "antd";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { purchaseApi } from "../../api/purchase.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { productApi } from "../../api/product.api";
-import type { WarehouseSimpleDto } from "../../api/warehouse.api";
-import type { ProductionGRCreateRequest } from "../../types/purchase";
-import type { Product } from "../../types/product";
 
 interface Props {
   open: boolean;
@@ -22,104 +13,63 @@ interface Props {
   onSuccess: () => void;
 }
 
-export default function CreateProductionGRModal({
-  open,
-  onCancel,
-  onSuccess,
-}: Props) {
+export default function CreateProductionGRModal({ open, onCancel, onSuccess }: Props) {
   const [form] = Form.useForm();
-
   const [loading, setLoading] = useState(false);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
 
-  const [loadingWarehouse, setLoadingWarehouse] = useState(false);
-  const [warehouses, setWarehouses] = useState<WarehouseSimpleDto[]>([]);
-
-  const [loadingProduct, setLoadingProduct] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-
-  // =======================
-  // Load kho thành phẩm
-  // =======================
   useEffect(() => {
-    if (!open) return;
+    if (open) {
+      const fetchData = async () => {
+        try {
+          const [whRes, prodRes] = await Promise.all([
+            warehouseApi.getByWarehouseType({ warehousetype: 1 }),
+            productApi.getAllByType(1)
+          ]);
+          setWarehouses(whRes.data.result || []);
+          setProducts(prodRes.data || []);
+        } catch {
+          message.error("Không thể tải dữ liệu danh mục");
+        }
+      };
+      fetchData();
+    } else {
+      form.resetFields();
+    }
+  }, [open, form]);
 
-    const loadWarehouses = async () => {
-      try {
-        setLoadingWarehouse(true);
-
-        const res = await warehouseApi.getByWarehouseType({
-          warehousetype: 1, // FinishedGoods
-        });
-
-        const data: WarehouseSimpleDto[] =
-          (res.data.result || [])
-            .filter((w: any) => w.status === 1)
-            .map((w: any) => ({
-              id: w.id,
-              name: w.name,
-            }));
-
-        setWarehouses(data);
-      } catch {
-        message.error("Không tải được danh sách kho thành phẩm");
-        setWarehouses([]);
-      } finally {
-        setLoadingWarehouse(false);
-      }
-    };
-
-    loadWarehouses();
-  }, [open]);
-
-  // =======================
-  // Load sản phẩm thành phẩm
-  // =======================
-  useEffect(() => {
-    if (!open) return;
-
-    const loadProducts = async () => {
-      try {
-        setLoadingProduct(true);
-
-        const res = await productApi.getAllByType(1); // Thành phẩm
-
-        setProducts(res.data.filter((p) => p.isActive));
-      } catch {
-        message.error("Không tải được danh sách sản phẩm");
-        setProducts([]);
-      } finally {
-        setLoadingProduct(false);
-      }
-    };
-
-    loadProducts();
-  }, [open]);
-
-  // =======================
-  // Submit
-  // =======================
   const onSubmit = async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
 
-      const payload: ProductionGRCreateRequest = {
+      // ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT ĐỂ SỬA LỖI 400
+      const payload = {
         code: values.code,
         warehouseId: values.warehouseId,
-        receiptType: 1, // PRODUCTION
+        receiptType: 1, 
         productionReceiptItems: values.items.map((i: any) => ({
           productId: i.productId,
           quantity: i.quantity,
+          // Phải viết hoa chữ L và C (LotCode) để khớp DTO của Backend
+          LotCode: i.lotCode, 
+          // Phải viết hoa chữ E và D (ExpiryDate)
+          ExpiryDate: i.expiryDate ? i.expiryDate.toISOString() : null,
+          status: 1
         })),
       };
 
       await purchaseApi.createGR(payload);
-
-      message.success("Tạo GR sản xuất thành công");
-      form.resetFields();
+      message.success("Tạo GR sản xuất thành công. Bây giờ bạn có thể Duyệt phiếu này.");
       onSuccess();
-    } catch {
-      message.error("Tạo GR thất bại");
+    } catch (error: any) {
+      const apiErrors = error.response?.data?.errors;
+      if (apiErrors) {
+        message.error("Lỗi dữ liệu: " + Object.values(apiErrors).flat().join(", "));
+      } else {
+        message.error(error.response?.data?.message || "Thất bại");
+      }
     } finally {
       setLoading(false);
     }
@@ -128,124 +78,73 @@ export default function CreateProductionGRModal({
   return (
     <Modal
       open={open}
-      title="Tạo GR sản xuất"
+      title="Tạo Phiếu Nhập Sản Xuất"
       onCancel={onCancel}
+      width={800}
       footer={null}
       destroyOnClose
     >
       <Form form={form} layout="vertical">
-        {/* Mã GR */}
-        <Form.Item
-          name="code"
-          label="Mã GR"
-          rules={[{ required: true }]}
-        >
-          <Input />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="code" label="Mã GR" rules={[{ required: true }]}>
+              <Input placeholder="Ví dụ: GR-2026-001" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="warehouseId" label="Kho nhận" rules={[{ required: true }]}>
+              <Select placeholder="Chọn kho">
+                {warehouses.map(w => <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>)}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
 
-        {/* Kho thành phẩm */}
-        <Form.Item
-          name="warehouseId"
-          label="Kho thành phẩm"
-          rules={[{ required: true }]}
-        >
-          <Select
-            showSearch
-            placeholder="Chọn kho thành phẩm"
-            loading={loadingWarehouse}
-            disabled={loadingWarehouse}
-            allowClear
-            optionFilterProp="label"
-            filterOption={(input, option) =>
-              (option?.label as string)
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-          >
-            {warehouses.map((w) => (
-              <Select.Option
-                key={w.id}
-                value={w.id}
-                label={w.name}
-              >
-                {w.name}
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
+        <Divider>Chi tiết sản phẩm & Số lô</Divider>
 
-        {/* Danh sách sản phẩm */}
         <Form.List name="items" initialValue={[{}]}>
           {(fields, { add, remove }) => (
             <>
-              {fields.map(({ key, name }) => (
-                <Space
-                  key={key}
-                  style={{ display: "flex" }}
-                  align="baseline"
-                >
-                  {/* Product */}
-                  <Form.Item
-                    name={[name, "productId"]}
-                    rules={[{ required: true }]}
-                  >
-                    <Select
-                      showSearch
-                      placeholder="Chọn sản phẩm"
-                      loading={loadingProduct}
-                      optionFilterProp="label"
-                      filterOption={(input, option) =>
-                        (option?.label as string)
-                          .toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                      style={{ width: 280 }}
-                    >
-                      {products.map((p) => (
-                        <Select.Option
-                          key={p.id}
-                          value={p.id}
-                          label={`${p.code} - ${p.name}`}
-                        >
-                          {p.code} - {p.name}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-
-                  {/* Quantity */}
-                  <Form.Item
-                    name={[name, "quantity"]}
-                    rules={[{ required: true }]}
-                  >
-                    <InputNumber min={1} placeholder="Số lượng" />
-                  </Form.Item>
-
-                  <Button danger onClick={() => remove(name)}>
-                    X
-                  </Button>
-                </Space>
+              {fields.map(({ key, name, ...restField }) => (
+                <Row key={key} gutter={8} align="bottom" style={{ marginBottom: 12 }}>
+                  <Col span={8}>
+                    <Form.Item {...restField} name={[name, "productId"]} label="Sản phẩm" rules={[{ required: true }]}>
+                      <Select showSearch optionFilterProp="label">
+                        {products.map(p => <Select.Option key={p.id} value={p.id} label={p.name}>{p.name}</Select.Option>)}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Form.Item {...restField} name={[name, "quantity"]} label="Số lượng" rules={[{ required: true }]}>
+                      <InputNumber min={1} style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={5}>
+                    <Form.Item {...restField} name={[name, "lotCode"]} label="Mã Lô (Lot)" rules={[{ required: true, message: 'Thiếu Lot' }]}>
+                      <Input placeholder="Nhập Lot" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={5}>
+                    <Form.Item {...restField} name={[name, "expiryDate"]} label="Hạn dùng">
+                      <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={2}>
+                    <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
+                  </Col>
+                </Row>
               ))}
-
-              <Button type="dashed" onClick={() => add()} block>
-                + Thêm sản phẩm
-              </Button>
+              <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>Thêm dòng</Button>
             </>
           )}
         </Form.List>
 
-        {/* Action */}
-        <Space style={{ marginTop: 20 }}>
-          <Button onClick={onCancel}>Hủy</Button>
-          <Button
-            type="primary"
-            loading={loading}
-            onClick={onSubmit}
-            disabled={loadingWarehouse || loadingProduct}
-          >
-            Tạo GR
-          </Button>
-        </Space>
+        <div style={{ textAlign: 'right', marginTop: 24 }}>
+          <Space>
+            <Button onClick={onCancel}>Hủy</Button>
+            <Button type="primary" loading={loading} onClick={onSubmit}>Tạo phiếu</Button>
+          </Space>
+        </div>
       </Form>
     </Modal>
   );

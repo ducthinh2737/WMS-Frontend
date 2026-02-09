@@ -1,14 +1,16 @@
-// Inventory DTO (frontend)
 // src/types/inventory.ts
 export interface InventoryDto {
   id: string;
   warehouseId: string;
-  warehouseName: string;   // 🆕 Thêm mới
+  warehouseName: string;
   locationId: string;
-  locationCode: string;    // 🆕 Thêm mới
+  locationCode: string;
+  lotId: string;       // 🆕 Thêm mới
+  lotCode: string;     // 🆕 Thêm mới
+  expiryDate: string;  // 🆕 Thêm mới
   productId: number;
-  productCode: string;     // 🆕 Thêm mới (SKU)
-  productName: string;     // 🆕 Thêm mới
+  productCode: string; 
+  productName: string; 
   onHandQuantity: number;
   lockedQuantity: number;
   availableQuantity: number;
@@ -17,7 +19,6 @@ export interface InventoryDto {
   createdAt: string;
   updatedAt?: string | null;
 }
-
 export const LocationType = {
   Receiving: 1,
   Storage: 2,

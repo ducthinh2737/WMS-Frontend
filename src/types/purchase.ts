@@ -93,6 +93,8 @@ export interface ProductionReceiptItemDto {
   quantity: number;
   receipt_Qty: number;
   status: number;
+  lotCode: string;     // Mã lô
+  expiryDate?: string; // Hạn dùng
   createdAt?: string;
   updatedAt?: string;
 }
@@ -100,9 +102,11 @@ export interface ProductionReceiptItemDto {
 export interface ProductionGRCreateRequest {
   code: string;
   warehouseId: string;
-  receiptType: number; // = 1
+  receiptType: number; // 1 = Production
   productionReceiptItems: {
     productId: number;
     quantity: number;
+    lotCode?: string;      // Thêm trường này
+    expiryDate?: string;   // Thêm trường này
   }[];
 }
