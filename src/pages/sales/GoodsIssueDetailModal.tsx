@@ -46,13 +46,14 @@ const statusMap: Record<number, { label: string; color: string }> = {
 };
 
 interface Props {
-    open: boolean;     
+  open: boolean;
   goodsIssueId: string;
   onClose: () => void;
   onActionSuccess?: () => void;
 }
 
 export default function GoodsIssueDetailModal({
+  open,
   goodsIssueId,
   onClose,
   onActionSuccess,
@@ -79,8 +80,10 @@ export default function GoodsIssueDetailModal({
   };
 
   useEffect(() => {
-    if (goodsIssueId) loadDetail();
-  }, [goodsIssueId]);
+    if (goodsIssueId && open) {
+      loadDetail();
+    }
+  }, [goodsIssueId, open]);
 
   /* ================= HELPERS ================= */
   const isInvalidLocation = (a: GoodsIssueAllocateDto) =>
@@ -133,7 +136,7 @@ export default function GoodsIssueDetailModal({
         }
         return null;
       })
-      .filter(Boolean) as PickingRequestDto["items"];
+      .filter((x): x is NonNullable<typeof x> => !!x);
 
     if (!items.length) {
       message.warning("Không có thay đổi nào để Picking");
@@ -146,42 +149,40 @@ export default function GoodsIssueDetailModal({
         id: item.id,
         goodsIssueId: detail.id,
         productId: Number(item.productId),
-        items,
+        allocations: items,
       });
       message.success("Picking thành công");
       await loadDetail(true);
       onActionSuccess?.();
     } catch (err: any) {
-  const data = err.response?.data;
-  const code = data?.code;
-  const msg = data?.message || "";
+      const data = err.response?.data;
+      const code = data?.code;
+      const msg = data?.message || "";
 
-  if (
-    code === "WAREHOUSE_SHIPPING_LOCATION_NOT_CONFIGURED" ||
-    msg.includes("chưa cấu hình vị trí xuất hàng")
-  ) {
-    Modal.warning({
-      title: "❗ Không thể Picking",
-      content: (
-        <>
-          <b>Kho chưa được cấu hình vị trí xuất hàng.</b>
-          <br />
-          Vui lòng thiết lập <b>Location loại Shipping / Output</b> trước khi Picking.
-        </>
-      ),
-    });
-  } else {
-    message.error(msg || "Picking không thành công");
-  }
-}
-
- finally {
+      if (
+        code === "WAREHOUSE_SHIPPING_LOCATION_NOT_CONFIGURED" ||
+        msg.includes("chưa cấu hình vị trí xuất hàng")
+      ) {
+        Modal.warning({
+          title: "❗ Không thể Picking",
+          content: (
+            <>
+              <b>Kho chưa được cấu hình vị trí xuất hàng.</b>
+              <br />
+              Vui lòng thiết lập <b>Location loại Shipping / Output</b> trước khi Picking.
+            </>
+          ),
+        });
+      } else {
+        message.error(msg || "Picking không thành công");
+      }
+    } finally {
       setActionLoading((p) => ({ ...p, [item.id]: false }));
     }
   };
 
   /* ================= ISSUE ================= */
-  const handleIssue = async (item: GoodsIssueItemDtoForFrontend) => {
+  const handleIssue = (item: GoodsIssueItemDtoForFrontend) => {
     const maxQty = Math.min(
       item.quantity - item.issuedQty,
       item.pickedQty - item.issuedQty
@@ -192,25 +193,38 @@ export default function GoodsIssueDetailModal({
     Modal.confirm({
       title: "Xác nhận xuất kho",
       content: (
-        <Space direction="vertical">
+        <Space direction="vertical" style={{ width: "100%" }}>
           <strong>
             {item.productCode} - {item.productName}
           </strong>
           <InputNumber
-            min={1}
+            min={0}
             max={maxQty}
             defaultValue={maxQty}
-            onChange={(v) => (issueQty = Number(v))}
+            style={{ width: "100%" }}
+            onChange={(v) => {
+              issueQty = v ?? 0;
+            }}
           />
         </Space>
       ),
+      okText: "Xuất kho",
       onOk: async () => {
-        await salesApi.issue({
-          goodsIssueItemId: item.id,
-          issuedQty: issueQty,
-        });
-        message.success("Xuất kho thành công");
-        await loadDetail(true);
+        if (issueQty <= 0) {
+          message.warning("Số lượng phải lớn hơn 0");
+          return;
+        }
+        try {
+          await salesApi.issue({
+            goodsIssueItemId: item.id,
+            issuedQty: issueQty,
+          });
+          message.success("Xuất kho thành công");
+          await loadDetail(true);
+          onActionSuccess?.();
+        } catch (err: any) {
+          message.error(err?.response?.data?.message || "Xuất kho thất bại");
+        }
       },
     });
   };
@@ -224,31 +238,33 @@ export default function GoodsIssueDetailModal({
       : 0;
 
   return (
-    <>
+    <Modal
+      title={`Chi tiết phiếu xuất kho: ${detail?.code || goodsIssueId}`}
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      width={1200}
+      destroyOnClose
+    >
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ReloadOutlined />} onClick={() => loadDetail()}>
           Làm mới
         </Button>
-        <Button onClick={onClose}>Đóng</Button>
       </Space>
 
       <Spin spinning={loading}>
         {detail && (
           <>
-            <Descriptions bordered size="small">
-              <Descriptions.Item label="Mã phiếu">
-                {detail.code}
-              </Descriptions.Item>
-              <Descriptions.Item label="Kho">
-                {detail.warehouseName}
-              </Descriptions.Item>
+            <Descriptions bordered size="small" column={3}>
+              <Descriptions.Item label="Mã phiếu">{detail.code}</Descriptions.Item>
+              <Descriptions.Item label="Kho">{detail.warehouseName}</Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
-                <Tag color={statusMap[detail.status]?.color}>
-                  {statusMap[detail.status]?.label}
+                <Tag color={statusMap[detail.status]?.color || "default"}>
+                  {statusMap[detail.status]?.label || "Không xác định"}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item span={3} label="Tiến độ">
-                <Progress percent={Math.round(overallProgress)} />
+              <Descriptions.Item label="Tiến độ" span={3}>
+                <Progress percent={Math.round(overallProgress)} status="active" />
               </Descriptions.Item>
             </Descriptions>
 
@@ -260,20 +276,19 @@ export default function GoodsIssueDetailModal({
               dataSource={detail.items}
               expandable={{ expandedRowRender }}
               columns={[
-                { title: "Mã SP", dataIndex: "productCode" },
-                { title: "Tên", dataIndex: "productName" },
-                { title: "Yêu cầu", dataIndex: "quantity" },
-                { title: "Pick", dataIndex: "pickedQty" },
-                { title: "Issue", dataIndex: "issuedQty" },
+                { title: "Mã SP", dataIndex: "productCode", width: 140 },
+                { title: "Tên sản phẩm", dataIndex: "productName" },
+                { title: "Yêu cầu", dataIndex: "quantity", width: 100, align: "right" },
+                { title: "Đã Pick", dataIndex: "pickedQty", width: 100, align: "right" },
+                { title: "Đã Issue", dataIndex: "issuedQty", width: 100, align: "right" },
               ]}
             />
           </>
         )}
       </Spin>
-    </>
+    </Modal>
   );
 
-  /* ================= EXPANDED ================= */
   function expandedRowRender(item: GoodsIssueItemDtoForFrontend) {
     return (
       <div style={{ padding: 12, background: "#fafafa" }}>
@@ -295,32 +310,36 @@ export default function GoodsIssueDetailModal({
           columns={[
             {
               title: "Vị trí",
-              render: (_, a) =>
+              render: (_, a: GoodsIssueAllocateDto) =>
                 isInvalidLocation(a) ? (
                   <Tag color="warning">Chưa xác định</Tag>
                 ) : (
                   a.locationCode
                 ),
+              width: 160,
             },
-            { title: "Phân bổ", dataIndex: "allocatedQty" },
-            { title: "Đã Pick", dataIndex: "pickedQty" },
-                      {
+            { title: "Phân bổ", dataIndex: "allocatedQty", width: 100, align: "right" },
+            { title: "Đã Pick", dataIndex: "pickedQty", width: 100, align: "right" },
+            {
               title: "Pick",
-              render: (_, a) => (
+              width: 140,
+              render: (_, a: GoodsIssueAllocateDto) => (
                 <InputNumber
                   min={0}
                   max={a.allocatedQty}
                   value={tempPicked[a.id] ?? a.pickedQty}
                   disabled={a.status === 2 || isInvalidLocation(a)}
                   onChange={(v) =>
-                    setTempPicked((p) => ({ ...p, [a.id]: v ?? 0 }))
+                    setTempPicked((p) => ({ ...p, [a.id]: Number(v) || 0 }))
                   }
+                  style={{ width: "100%" }}
                 />
               ),
             },
             {
               title: "Thao tác",
-              render: (_, a) =>
+              width: 120,
+              render: (_, a: GoodsIssueAllocateDto) =>
                 isInvalidLocation(a) ? (
                   <Tag color="warning">Chưa có vị trí</Tag>
                 ) : a.status === 2 ? (
@@ -330,7 +349,9 @@ export default function GoodsIssueDetailModal({
                     icon={<CheckCircleOutlined />}
                     type="text"
                     onClick={() => handlePickMaxSingle(a)}
-                  />
+                  >
+                    Max
+                  </Button>
                 ),
             },
           ]}

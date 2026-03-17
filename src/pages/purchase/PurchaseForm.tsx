@@ -4,7 +4,6 @@ import {
   InputNumber,
   Button,
   message,
-  Input,
   Modal,
   Alert,
 } from "antd";
@@ -39,13 +38,10 @@ export default function PurchaseCreateModal({
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseSimpleDto[]>([]);
 
-  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(
-    null
-  );
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [loadingWarehouse, setLoadingWarehouse] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   /* ================= HELPERS ================= */
@@ -77,14 +73,10 @@ export default function PurchaseCreateModal({
 
       const [supRes, whRes] = await Promise.all([
         supplierApi.getAll(),
-        warehouseApi.getByWarehouseType({
-          warehousetype: 0, // ✅ RawMaterial
-        }),
+        warehouseApi.getByWarehouseType({ warehousetype: 0 }),
       ]);
 
       setSuppliers(supRes.data);
-
-      // BE đã filter → FE chỉ map
       setWarehouses(
         whRes.data.result.map((w) => ({
           id: w.id,
@@ -106,10 +98,7 @@ export default function PurchaseCreateModal({
 
     try {
       setLoadingProducts(true);
-
-      // ✅ chỉ lấy sản phẩm nguyên vật liệu
       const res = await productApi.getAllByType(0);
-
       setProducts(res.data.filter((p) => p.supplierId === supplierId));
     } catch {
       message.error("Không thể tải sản phẩm");
@@ -132,8 +121,10 @@ export default function PurchaseCreateModal({
 
       setLoading(true);
 
+      // Không gửi code — backend tự sinh
       await purchaseApi.createPOs({
-        ...values,
+        supplierId: values.supplierId,
+        code: "",
         items: values.items.map((i: any) => ({
           ...i,
           productId: String(i.productId),
@@ -200,15 +191,6 @@ export default function PurchaseCreateModal({
               ))}
             </Select>
           </Form.Item>
-
-          <Form.Item
-            label="Mã PO"
-            name="code"
-            rules={[{ required: true }]}
-            style={{ width: 300 }}
-          >
-            <Input placeholder="VD: PO20260001" />
-          </Form.Item>
         </div>
 
         {/* ===== ITEMS ===== */}
@@ -244,11 +226,7 @@ export default function PurchaseCreateModal({
                         optionFilterProp="label"
                       >
                         {products.map((p) => (
-                          <Select.Option
-                            key={p.id}
-                            value={p.id}
-                            label={p.name}
-                          >
+                          <Select.Option key={p.id} value={p.id} label={p.name}>
                             {p.name}
                           </Select.Option>
                         ))}
@@ -268,11 +246,7 @@ export default function PurchaseCreateModal({
                         optionFilterProp="label"
                       >
                         {warehouses.map((w) => (
-                          <Select.Option
-                            key={w.id}
-                            value={w.id}
-                            label={w.name}
-                          >
+                          <Select.Option key={w.id} value={w.id} label={w.name}>
                             {w.name}
                           </Select.Option>
                         ))}

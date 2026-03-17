@@ -1,3 +1,4 @@
+// src/pages/sales/GoodsIssueList.tsx
 import {
   Table,
   Button,
@@ -43,39 +44,32 @@ export default function GoodsIssueList() {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [selectedGI, setSelectedGI] = useState<any | null>(null);
+  const [selectedGIId, setSelectedGIId] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
 
   useEffect(() => {
     setList([]);
-    setSelectedGI(null);
+    setSelectedGIId(null);
     setOpenDetail(false);
     setOpenCreate(false);
     fetchGIs();
   }, [activeTab]);
 
   const fetchGIs = async () => {
-  setLoading(true);
-  try {
-    const type =
-      activeTab === "sale" ? GIType.Sale : GIType.Production;
-
-    const res = await salesApi.queryGI({ type });
-
-    // 🔥 FILTER CỨNG Ở FE
-    const filtered = (res.data || []).filter(
-      (x: any) => x.type === type
-    );
-
-    setList(filtered);
-  } catch {
-    message.error("Không tải được danh sách GI");
-  } finally {
-    setLoading(false);
-  }
-};
-
+    setLoading(true);
+    try {
+      const type = activeTab === "sale" ? GIType.Sale : GIType.Production;
+      const res = await salesApi.queryGI({ type });
+      // Filter cứng ở FE (nếu backend chưa lọc)
+      const filtered = (res.data || []).filter((x: any) => x.type === type);
+      setList(filtered);
+    } catch {
+      message.error("Không tải được danh sách GI");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const approveGI = async (id: string) => {
     try {
@@ -87,6 +81,11 @@ export default function GoodsIssueList() {
     }
   };
 
+  const openDetailModal = (gi: any) => {
+    setSelectedGIId(gi.id);
+    setOpenDetail(true);
+  };
+
   const baseColumns = [
     { title: "Mã GI", dataIndex: "code" },
     {
@@ -94,13 +93,13 @@ export default function GoodsIssueList() {
       dataIndex: "status",
       render: (s: number) => {
         const info = StatusMap[s];
-        return <Tag color={info.color}>{info.label}</Tag>;
+        return <Tag color={info?.color}>{info?.label || "Không xác định"}</Tag>;
       },
     },
     {
       title: "Ngày xuất",
       dataIndex: "issuedAt",
-      render: (d: string) =>
+      render: (d: string | null) =>
         d ? new Date(d).toLocaleString("vi-VN") : "-",
     },
   ];
@@ -110,12 +109,12 @@ export default function GoodsIssueList() {
     {
       title: "Đơn bán",
       render: (_: any, r: any) =>
-        r.salesOrderCode || `SO-${r.salesOrderId?.slice(0, 8)}...`,
+        r.salesOrderCode || `SO-${r.salesOrderId?.slice(0, 8) || ""}...`,
     },
     {
       title: "Hành động",
       render: (_: any, r: any) => (
-        <Button size="small" onClick={() => openDetailGI(r)}>
+        <Button size="small" onClick={() => openDetailModal(r)}>
           Chi tiết
         </Button>
       ),
@@ -133,6 +132,8 @@ export default function GoodsIssueList() {
               <Popconfirm
                 title={`Duyệt GI ${r.code}?`}
                 onConfirm={() => approveGI(r.id)}
+                okText="Duyệt"
+                cancelText="Hủy"
               >
                 <Button type="primary" size="small">
                   Duyệt
@@ -147,7 +148,7 @@ export default function GoodsIssueList() {
               <Button
                 type="primary"
                 size="small"
-                onClick={() => openDetailGI(r)}
+                onClick={() => openDetailModal(r)}
               >
                 Picking / Xuất
               </Button>
@@ -157,16 +158,11 @@ export default function GoodsIssueList() {
             return <Tag color="green">Hoàn thành</Tag>;
 
           default:
-            return null;
+            return <Button size="small">Xem</Button>;
         }
       },
     },
   ];
-
-  const openDetailGI = (gi: any) => {
-    setSelectedGI(gi);
-    setOpenDetail(true);
-  };
 
   return (
     <div>
@@ -195,10 +191,10 @@ export default function GoodsIssueList() {
         pagination={{ pageSize: 10 }}
       />
 
-      {selectedGI && (
+      {selectedGIId && (
         <GoodsIssueDetailModal
           open={openDetail}
-          goodsIssueId={selectedGI.id}
+          goodsIssueId={selectedGIId}
           onClose={() => setOpenDetail(false)}
           onActionSuccess={fetchGIs}
         />

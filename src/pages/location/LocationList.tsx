@@ -50,7 +50,7 @@ export default function LocationList() {
   useEffect(() => {
     const fetchWarehouses = async () => {
       try {
-        const res = await warehouseApi.query(1, 999);
+        const res = await warehouseApi.query(1, 10000);
         setWarehouses(res.data.items.map((w: any) => ({ 
           id: w.id, 
           name: w.name, 

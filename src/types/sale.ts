@@ -52,14 +52,15 @@ export interface GoodsIssueItemDtoForFrontend {
   updateAt?: string;
 }
 
+// src/types/sale.ts
 export interface PickingRequestDto {
-  id: string;             // GoodsIssueItem ID
+  id: string;
   goodsIssueId: string;
-  productId: number;      // Chuyển thành number cho khớp int của C#
-  items: Array<{
-    id: string;           // GoodsIssueAllocate ID
+  productId: number;
+  allocations: Array<{    // ✅ ĐỔI TỪ "items" SANG "allocations"
+    id: string;
     pickedQty: number;
-    locationId: string;   // ✅ Thêm trường này
+    locationId: string;
   }>;
 }
 // src/types/sale.ts

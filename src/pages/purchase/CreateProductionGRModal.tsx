@@ -1,5 +1,5 @@
 import {
-  Modal, Form, Input, InputNumber, Button, Space, message, Select, DatePicker, Row, Col, Divider
+  Modal, Form, InputNumber, Button, Space, message, Select, Row, Col, Divider
 } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
@@ -44,18 +44,14 @@ export default function CreateProductionGRModal({ open, onCancel, onSuccess }: P
       const values = await form.validateFields();
       setLoading(true);
 
-      // ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT ĐỂ SỬA LỖI 400
       const payload = {
-        code: values.code,
         warehouseId: values.warehouseId,
-        receiptType: 1, 
+        code: "",  // sinh tự động ở backend
+        receiptType: 1,
         productionReceiptItems: values.items.map((i: any) => ({
           productId: i.productId,
           quantity: i.quantity,
-          // Phải viết hoa chữ L và C (LotCode) để khớp DTO của Backend
-          LotCode: i.lotCode, 
-          // Phải viết hoa chữ E và D (ExpiryDate)
-          ExpiryDate: i.expiryDate ? i.expiryDate.toISOString() : null,
+          lotCode: "",   // sinh tự động ở backend
           status: 1
         })),
       };
@@ -80,61 +76,66 @@ export default function CreateProductionGRModal({ open, onCancel, onSuccess }: P
       open={open}
       title="Tạo Phiếu Nhập Sản Xuất"
       onCancel={onCancel}
-      width={800}
+      width={700}
       footer={null}
       destroyOnClose
     >
       <Form form={form} layout="vertical">
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="code" label="Mã GR" rules={[{ required: true }]}>
-              <Input placeholder="Ví dụ: GR-2026-001" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="warehouseId" label="Kho nhận" rules={[{ required: true }]}>
-              <Select placeholder="Chọn kho">
-                {warehouses.map(w => <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>)}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
+        <Form.Item name="warehouseId" label="Kho nhận" rules={[{ required: true }]}>
+          <Select placeholder="Chọn kho">
+            {warehouses.map(w => (
+              <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
 
-        <Divider>Chi tiết sản phẩm & Số lô</Divider>
+        <Divider>Chi tiết sản phẩm</Divider>
 
         <Form.List name="items" initialValue={[{}]}>
           {(fields, { add, remove }) => (
             <>
               {fields.map(({ key, name, ...restField }) => (
                 <Row key={key} gutter={8} align="bottom" style={{ marginBottom: 12 }}>
-                  <Col span={8}>
-                    <Form.Item {...restField} name={[name, "productId"]} label="Sản phẩm" rules={[{ required: true }]}>
+                  <Col span={14}>
+                    <Form.Item
+                      {...restField}
+                      name={[name, "productId"]}
+                      label="Sản phẩm"
+                      rules={[{ required: true }]}
+                    >
                       <Select showSearch optionFilterProp="label">
-                        {products.map(p => <Select.Option key={p.id} value={p.id} label={p.name}>{p.name}</Select.Option>)}
+                        {products.map(p => (
+                          <Select.Option key={p.id} value={p.id} label={p.name}>
+                            {p.name}
+                          </Select.Option>
+                        ))}
                       </Select>
                     </Form.Item>
                   </Col>
-                  <Col span={4}>
-                    <Form.Item {...restField} name={[name, "quantity"]} label="Số lượng" rules={[{ required: true }]}>
+                  <Col span={8}>
+                    <Form.Item
+                      {...restField}
+                      name={[name, "quantity"]}
+                      label="Số lượng"
+                      rules={[{ required: true }]}
+                    >
                       <InputNumber min={1} style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
-                  <Col span={5}>
-                    <Form.Item {...restField} name={[name, "lotCode"]} label="Mã Lô (Lot)" rules={[{ required: true, message: 'Thiếu Lot' }]}>
-                      <Input placeholder="Nhập Lot" />
-                    </Form.Item>
-                  </Col>
-                  <Col span={5}>
-                    <Form.Item {...restField} name={[name, "expiryDate"]} label="Hạn dùng">
-                      <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-                    </Form.Item>
-                  </Col>
                   <Col span={2}>
-                    <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => remove(name)}
+                      style={{ marginBottom: 24 }}
+                    />
                   </Col>
                 </Row>
               ))}
-              <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>Thêm dòng</Button>
+              <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                Thêm dòng
+              </Button>
             </>
           )}
         </Form.List>

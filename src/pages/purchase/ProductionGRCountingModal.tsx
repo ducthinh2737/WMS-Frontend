@@ -30,19 +30,17 @@ export default function ProductionGRCountingModal({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  // Lấy danh sách item từ phiếu nhập hiện tại
   const items = gr.productionReceiptItems ?? [];
 
-  // Reset form mỗi khi mở modal với dữ liệu mới
   useEffect(() => {
     if (open) {
       form.setFieldsValue({
         items: items.map((i) => ({
           id: i.id,
           productId: i.productId,
-          lotCode: i.lotCode, // Nếu đã có lot từ bước tạo thì hiện lên, chưa có thì để trống
           expiryDate: i.expiryDate ? dayjs(i.expiryDate) : null,
-          receipt_Qty: i.quantity - (i.receipt_Qty || 0), // Gợi ý nhập hết số còn lại
+          manufacturingDate: i.manufacturingDate ? dayjs(i.manufacturingDate) : null,
+          receipt_Qty: i.quantity - (i.receipt_Qty || 0),
         })),
       });
     }
@@ -54,29 +52,33 @@ export default function ProductionGRCountingModal({
       const values = await form.validateFields();
       setLoading(true);
 
-      // Map lại dữ liệu để gửi về Backend
       const payload: any = {
-        ...gr, // Giữ nguyên các thông tin header của phiếu GR
+        ...gr,
         productionReceiptItems: values.items.map((formItem: any) => {
           const originalItem = items.find((i) => i.id === formItem.id);
           return {
-            ...originalItem, // Giữ các trường id, productId gốc
-            lotCode: formItem.lotCode, // Cập nhật Lot Code mới nhập
-            expiryDate: formItem.expiryDate ? formItem.expiryDate.toISOString() : null,
-            receipt_Qty: formItem.receipt_Qty, // Số lượng thực tế đếm được đợt này
+            ...originalItem,
+            lotCode: "",  // sinh tự động ở backend
+            expiryDate: formItem.expiryDate
+              ? formItem.expiryDate.format('YYYY-MM-DD')
+              : null,
+            manufacturingDate: formItem.manufacturingDate
+              ? formItem.manufacturingDate.format('YYYY-MM-DD')
+              : null,
+            receipt_Qty: formItem.receipt_Qty,
           };
         }),
       };
 
       await purchaseApi.countingProductionGR(payload);
 
-      message.success("Cập nhật số lô và kiểm đếm thành công");
+      message.success("Kiểm đếm thành công");
       onSuccess();
     } catch (err: any) {
       console.error("Counting Error:", err.response?.data);
-      const errorMsg = err.response?.data?.errors 
-        ? "Dữ liệu không hợp lệ (Kiểm tra mã lô)" 
-        : (err.response?.data?.message || "Kiểm đếm thất bại");
+      const errorMsg = err.response?.data?.errors
+        ? "Dữ liệu không hợp lệ"
+        : err.response?.data?.message || "Kiểm đếm thất bại";
       message.error(errorMsg);
     } finally {
       setLoading(false);
@@ -86,17 +88,20 @@ export default function ProductionGRCountingModal({
   return (
     <Modal
       open={open}
-      title={`Kiểm đếm & Nhập số lô - Phiếu: ${gr.code}`}
+      title={`Kiểm đếm - Phiếu: ${gr.code}`}
       onCancel={onCancel}
       onOk={onSubmit}
       confirmLoading={loading}
       okText="Xác nhận nhập kho"
       cancelText="Hủy bỏ"
       destroyOnClose
-      width={700}
+      width={750}
     >
-      <div style={{ marginBottom: 16, color: '#666' }}>
-        <i>Ghi chú: Vui lòng kiểm tra mã lô (Lot) trên bao bì thực tế trước khi xác nhận.</i>
+      <div style={{ marginBottom: 16, color: "#666" }}>
+        <i>
+          Ghi chú: Lot Code sẽ được hệ thống tự động tạo. Vui lòng nhập ngày
+          sản xuất và hạn sử dụng từ bao bì thực tế.
+        </i>
       </div>
 
       <Form form={form} layout="vertical">
@@ -122,40 +127,51 @@ export default function ProductionGRCountingModal({
                       <div style={{ marginBottom: 8 }}>
                         <strong>Sản phẩm ID:</strong> {item.productId}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#888' }}>
-                        Tổng dự kiến: {item.quantity} | Đã nhận: {item.receipt_Qty || 0}
+                      <div style={{ fontSize: "12px", color: "#888" }}>
+                        Tổng dự kiến: {item.quantity} | Đã nhận:{" "}
+                        {item.receipt_Qty || 0}
                       </div>
                     </Col>
-                    <Col span={12} style={{ textAlign: 'right' }}>
-                      <span style={{ color: '#fa8c16', fontWeight: 'bold' }}>
+                    <Col span={12} style={{ textAlign: "right" }}>
+                      <span style={{ color: "#fa8c16", fontWeight: "bold" }}>
                         Còn lại: {remainingQty}
                       </span>
                     </Col>
                   </Row>
 
-                  <Divider style={{ margin: '12px 0' }} />
+                  <Divider style={{ margin: "12px 0" }} />
 
                   <Row gutter={12}>
-                    {/* NHẬP MÃ LÔ - BẮT BUỘC */}
-                    <Col span={10}>
+                    {/* NGÀY SẢN XUẤT */}
+                    <Col span={8}>
                       <Form.Item
-                        name={[name, "lotCode"]}
-                        label="Mã Lô (Lot Code)"
-                        rules={[{ required: true, message: "Phải nhập mã lô" }]}
+                        name={[name, "manufacturingDate"]}
+                        label="Ngày sản xuất"
                       >
-                        <Input placeholder="Ví dụ: LOT20260205" />
+                        <DatePicker
+                          style={{ width: "100%" }}
+                          format="DD/MM/YYYY"
+                          placeholder="Chọn ngày SX"
+                        />
                       </Form.Item>
                     </Col>
 
                     {/* HẠN DÙNG */}
-                    <Col span={7}>
-                      <Form.Item name={[name, "expiryDate"]} label="Hạn dùng">
-                        <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+                    <Col span={8}>
+                      <Form.Item
+                        name={[name, "expiryDate"]}
+                        label="Hạn sử dụng"
+                      >
+                        <DatePicker
+                          style={{ width: "100%" }}
+                          format="DD/MM/YYYY"
+                          placeholder="Chọn hạn dùng"
+                        />
                       </Form.Item>
                     </Col>
 
                     {/* SỐ LƯỢNG THỰC NHẬN */}
-                    <Col span={7}>
+                    <Col span={8}>
                       <Form.Item
                         name={[name, "receipt_Qty"]}
                         label="SL Nhận"
@@ -163,12 +179,10 @@ export default function ProductionGRCountingModal({
                           { required: true, message: "Nhập SL" },
                           {
                             validator: (_, value) => {
-                              if (value > remainingQty) {
+                              if (value > remainingQty)
                                 return Promise.reject(`Tối đa ${remainingQty}`);
-                              }
-                              if (value <= 0) {
+                              if (value <= 0)
                                 return Promise.reject(`Phải > 0`);
-                              }
                               return Promise.resolve();
                             },
                           },
@@ -177,15 +191,22 @@ export default function ProductionGRCountingModal({
                         <InputNumber
                           min={1}
                           max={remainingQty}
-                          style={{ width: "100%", border: '1px solid #fa8c16' }}
+                          style={{
+                            width: "100%",
+                            border: "1px solid #fa8c16",
+                          }}
                         />
                       </Form.Item>
                     </Col>
                   </Row>
 
                   {/* Hidden fields */}
-                  <Form.Item name={[name, "id"]} hidden><Input /></Form.Item>
-                  <Form.Item name={[name, "productId"]} hidden><Input /></Form.Item>
+                  <Form.Item name={[name, "id"]} hidden>
+                    <Input />
+                  </Form.Item>
+                  <Form.Item name={[name, "productId"]} hidden>
+                    <Input />
+                  </Form.Item>
                 </div>
               );
             })

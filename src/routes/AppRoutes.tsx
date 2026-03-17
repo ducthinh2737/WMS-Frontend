@@ -21,7 +21,6 @@ import SaleOrderDetail from "../pages/sales/SaleOrderDetail";
 import SaleOrderCreate from "../pages/sales/SaleOrderCreate";
 import GoodsIssueList from "../pages/sales/GoodIssueList";
 import GoodsIssueCreate from "../pages/sales/GoodIssueCreate";
-import GoodsIssueDetail from "../pages/sales/GoodIssueDetail";
 
 // INVENTORY
 import InventoryList from "../pages/inventory/InventoryList";
@@ -177,7 +176,6 @@ export default function AppRoutes() {
 
                 <Route path="sales/goods-issue" element={<GoodsIssueList />} />
                 <Route path="sales/goods-issue/create" element={<GoodsIssueCreate />} />
-                <Route path="sales/goods-issue/:id" element={<GoodsIssueDetail />} />
 
                 {/* TRANSFER */}
                 <Route path="transfer" element={<TransferList />} />

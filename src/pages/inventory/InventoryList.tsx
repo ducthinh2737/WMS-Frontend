@@ -39,7 +39,7 @@ export default function InventoryList() {
   const [locations, setLocations] = useState<{ label: string; value: string }[]>([]);
 
   useEffect(() => {
-    warehouseApi.query(1, 100).then((res) => {
+    warehouseApi.query(1, 10000).then((res) => {
       setWarehouses(res.data.items.map((w: any) => ({ label: w.name, value: w.id })));
     });
   }, []);
@@ -91,15 +91,22 @@ export default function InventoryList() {
       />
 
       <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
-        <Select
-          placeholder="Tìm kho theo tên..."
-          allowClear
-          showSearch
-          style={{ width: 220 }}
-          options={warehouses}
-          onChange={handleWarehouseChange}
-          optionFilterProp="label"
-        />
+       <Select
+  placeholder="Tìm kho theo tên..."
+  allowClear
+  showSearch
+  style={{ width: 220 }}
+  options={warehouses}
+  onChange={handleWarehouseChange}
+  optionFilterProp="label"
+  filterOption={(input, option) =>
+    (option?.label ?? "")
+      .toString()
+      .toLowerCase()
+      .includes(input.toLowerCase())
+  }
+/>
+
         <Select
           placeholder="Vị trí"
           allowClear

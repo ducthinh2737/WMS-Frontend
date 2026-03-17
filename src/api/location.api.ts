@@ -13,6 +13,10 @@ export const locationApi = {
         ...dto,
         warehouseId,  // đảm bảo backend nhận đúng
     }),
+listByType: (warehouseId: string, type: number) =>
+  http.get(`/warehouses/${warehouseId}/locations`, {
+    params: { type },
+  }),
 
 
     update: (warehouseId: string, id: string, dto: LocationUpdateDto) =>

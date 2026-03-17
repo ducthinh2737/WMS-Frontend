@@ -54,6 +54,7 @@ export interface InventoryHistoryDto {
 export interface PutawayDto {
     productId: number;
     warehouseId: string;
+    lotId: string;
     fromLocationId: string; // Receiving location
     toLocationId: string;   // Storage location
     qty: number;

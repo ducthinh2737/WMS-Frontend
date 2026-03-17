@@ -8,6 +8,7 @@ import type {
   ProductionGRCreateRequest,
   GoodsReceiptItemDto,
   GRByTypeParams,
+  ReceiveItemRequest,
 } from "../types/purchase";
 
 const baseUrl = "/purchase";
@@ -31,7 +32,7 @@ export const purchaseApi = {
     http.get<GoodsReceiptDto[]>(`${baseUrl}/grbytype`, { params }),
   
   cancelGR: (id: string) => http.delete(`${baseUrl}/gr/${id}`),
-  ReceiveItem: (payload: GoodsReceiptItemDto) => http.post(`${baseUrl}/receive-item`, payload),
+  ReceiveItem: (payload: ReceiveItemRequest) => http.post(`${baseUrl}/receive-item`, payload),
   createGR: (payload: ProductionGRCreateRequest) =>
     http.post<GoodsReceiptDto>(`${baseUrl}/gr`, payload),
 
