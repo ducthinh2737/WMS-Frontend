@@ -1,6 +1,7 @@
 import { Button, Form, Input, message, Modal, Select } from "antd";
 import { useState } from "react";
 import { warehouseApi } from "../../api/warehouse.api";
+import type { WarehouseType } from "../../types/warehouse";
 
 interface Props {
   open: boolean;
@@ -8,35 +9,35 @@ interface Props {
   onSuccess: () => void;
 }
 
+const warehouseTypeOptions: { value: WarehouseType; label: string }[] = [
+  { value: 0, label: "Kho nguyên vật liệu" },
+  { value: 1, label: "Kho thành phẩm" },
+  { value: 2, label: "Kho phụ liệu" },
+  { value: 3, label: "Kho hóa chất" },
+];
+
 export default function WarehouseCreateModal({ open, onCancel, onSuccess }: Props) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const warehouseTypeOptions = [
-  { value: "RawMaterial", label: "Kho nguyên vật liệu" },
-  { value: "FinishedGoods", label: "Kho thành phẩm" },
-  { value: "Auxiliary", label: "Kho phụ liệu" },
-  { value: "Chemical", label: "Kho hóa chất" },
-];
 
   const onFinish = async (values: any) => {
-  setLoading(true);
-  try {
-    await warehouseApi.create({
-      code: values.code.trim().toUpperCase(),
-      name: values.name.trim(),
-      address: values.address?.trim() || null,
-      warehouseType: values.warehouseType, // 👈 thêm dòng này
-    });
-    message.success("Tạo kho thành công!");
-    form.resetFields();
-    onSuccess();
-  } catch (err: any) {
-    message.error(err.response?.data?.message || "Tạo kho thất bại");
-  } finally {
-    setLoading(false);
-  }
-};
-
+    setLoading(true);
+    try {
+      await warehouseApi.create({
+        code: values.code.trim().toUpperCase(),
+        name: values.name.trim(),
+        address: values.address?.trim() || null,
+        warehouseType: values.warehouseType, // số: 0 | 1 | 2 | 3
+      });
+      message.success("Tạo kho thành công!");
+      form.resetFields();
+      onSuccess();
+    } catch (err: any) {
+      message.error(err.response?.data?.message || "Tạo kho thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Modal
@@ -50,9 +51,9 @@ export default function WarehouseCreateModal({ open, onCancel, onSuccess }: Prop
       centered
       destroyOnClose
     >
-      <Form 
-        form={form} 
-        layout="vertical" 
+      <Form
+        form={form}
+        layout="vertical"
         onFinish={onFinish}
         style={{ marginTop: 16 }}
       >
@@ -77,6 +78,7 @@ export default function WarehouseCreateModal({ open, onCancel, onSuccess }: Prop
         >
           <Input placeholder="Ví dụ: Kho Tổng Miền Nam" />
         </Form.Item>
+
         <Form.Item
           label="Loại kho"
           name="warehouseType"
@@ -87,6 +89,7 @@ export default function WarehouseCreateModal({ open, onCancel, onSuccess }: Prop
             options={warehouseTypeOptions}
           />
         </Form.Item>
+
         <Form.Item label="Địa chỉ" name="address">
           <Input.TextArea
             rows={3}

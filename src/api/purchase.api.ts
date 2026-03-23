@@ -1,45 +1,62 @@
 import http from "./http";
 import type {
-  PurchaseOrderDto,
-  GoodsReceiptDto,
-  PurchaseQueryParams,
-  GoodsReceiptCreateRequest,
-  PurchaseOrderCreateRequest,
-  ProductionGRCreateRequest,
-  GoodsReceiptItemDto,
-  GRByTypeParams,
-  ReceiveItemRequest,
-} from "../types/purchase";
+  WarehouseByIdDto,
+  WarehouseCreateDto,
+  WarehouseDto,
+  WarehouseUpdateDto,
+} from "../types/warehouse";
 
-const baseUrl = "/purchase";
+export interface WarehousesByTypeRequest {
+  warehousetype: number;
+}
 
-export const purchaseApi = {
-  // PO
-  getPO: (id: string) => http.get<PurchaseOrderDto>(`${baseUrl}/po/${id}`),
-  getPOM0: (id: string) => http.get<PurchaseOrderDto>(`${baseUrl}/pom0/${id}`),
-  getPOs: (params?: PurchaseQueryParams) => http.get<PurchaseOrderDto[]>(`${baseUrl}/po`, { params }),
-  createPOs: (payload: PurchaseOrderCreateRequest) => http.post(`${baseUrl}/po`, payload),
-  createPO: (payload: PurchaseOrderDto) => http.post(`${baseUrl}/po`, payload),
-  approvePO: (id: string) => http.post(`${baseUrl}/po/${id}/approve`),
-  rejectPO: (id: string) => http.post(`${baseUrl}/po/${id}/reject`),
+export interface WarehouseSimpleDto {
+  id: string;
+  name: string;
+}
 
-  // GR
-  getGR: (id: string) => http.get<GoodsReceiptDto>(`${baseUrl}/gr/${id}`),
-  getGRs: (params?: PurchaseQueryParams) => http.get<GoodsReceiptDto[]>(`${baseUrl}/gr`, { params }),
-  
-  // ✅ NEW: Get GR by type
-  getGRsByType: (params: GRByTypeParams) => 
-    http.get<GoodsReceiptDto[]>(`${baseUrl}/grbytype`, { params }),
-  
-  cancelGR: (id: string) => http.delete(`${baseUrl}/gr/${id}`),
-  ReceiveItem: (payload: ReceiveItemRequest) => http.post(`${baseUrl}/receive-item`, payload),
-  createGR: (payload: ProductionGRCreateRequest) =>
-    http.post<GoodsReceiptDto>(`${baseUrl}/gr`, payload),
+export interface WarehousesByTypeResponse {
+  result: {
+    id: string;
+    name: string;
+    status: number;
+    warehouseType: number;
+  }[];
+}
 
-  // Production GR
-  approveProductionGR: (payload: GoodsReceiptDto) =>
-    http.post<GoodsReceiptDto>(`${baseUrl}/gr-production-approve`, payload),
+export const warehouseApi = {
+  query: (
+    page: number,
+    pageSize: number,
+    q?: string,
+    sortBy: "name" | "createdAt" = "createdAt",
+    asc: boolean = false
+  ) =>
+    http.get<{ items: WarehouseDto[]; total: number }>("/Warehouses", {
+      params: { page, pageSize, q, sortBy, asc },
+    }),
 
-  countingProductionGR: (payload: GoodsReceiptDto) =>
-    http.post<GoodsReceiptDto>(`${baseUrl}/gr-production-counting`, payload),
+  getById: (id: string) =>
+    http.get<WarehouseDto>(`/Warehouses/${id}`),
+
+  create: (dto: WarehouseCreateDto) =>
+    http.post("/Warehouses", dto),
+
+  getwarehouseid: (dto: WarehouseByIdDto) =>
+    http.get("/Warehouses/warehousebyid", { params: dto }),
+
+  getByWarehouseType: (dto: WarehousesByTypeRequest) =>
+    http.post<WarehousesByTypeResponse>("/Warehouses/warehousebytype", dto),
+
+  update: (id: string, data: WarehouseUpdateDto) =>
+    http.put(`/Warehouses/${id}`, data),
+
+  delete: (id: string) =>
+    http.delete(`/Warehouses/${id}`),
+
+  lock: (id: string, reason?: string) =>
+    http.post(`/Warehouses/${id}/lock`, reason ? { reason } : {}),
+
+  unlock: (id: string) =>
+    http.post(`/Warehouses/${id}/unlock`),
 };

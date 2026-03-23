@@ -43,6 +43,7 @@ export interface PurchaseItemForm {
 
 export interface PurchaseOrderCreateRequest {
   supplierId: number;
+  code: string;
   items: PurchaseItemForm[];
 }
 
