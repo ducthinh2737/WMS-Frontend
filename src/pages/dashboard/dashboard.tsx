@@ -877,27 +877,7 @@ export default function Dashboard() {
 
       {/* BOTTOM: Recent lists */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {/* Sales Orders */}
-        <Col xs={24} md={8}>
-          <Card
-            title={<div style={{ display: "flex", justifyContent: "space-between" }}><span><ShoppingCartOutlined style={{ marginRight: 6 }} />Đơn hàng gần đây</span>{stats.pendingOrders > 0 && <Badge count={stats.pendingOrders} color="orange" />}</div>}
-            style={{ borderRadius: 12 }}
-            loading={loading}
-          >
-            {recentOrders.length === 0 ? <Empty description="Không có đơn hàng" /> : recentOrders.map((order) => (
-              <div key={order.id} style={{ padding: "8px 0", borderBottom: "1px solid #f5f5f5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{order.code}</div>
-                  <div style={{ fontSize: 11, color: "#8c8c8c" }}>{order.customerName}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  {getStatusTag(order.status)}
-                  <div style={{ fontSize: 12, color: "#595959", marginTop: 2 }}>{(order.totalAmount || 0).toLocaleString("vi-VN")} đ</div>
-                </div>
-              </div>
-            ))}
-          </Card>
-        </Col>
+        
 
         {/* Purchase Orders */}
         <Col xs={24} md={8}>
