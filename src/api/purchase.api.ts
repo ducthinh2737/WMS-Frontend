@@ -1,62 +1,57 @@
 import http from "./http";
 import type {
-  WarehouseByIdDto,
-  WarehouseCreateDto,
-  WarehouseDto,
-  WarehouseUpdateDto,
-} from "../types/warehouse";
+  PurchaseOrderDto,
+  GoodsReceiptDto,
+  PurchaseQueryParams,
+  GoodsReceiptCreateRequest,
+  PurchaseOrderCreateRequest,
+  ProductionGRCreateRequest,
+  GoodsReceiptItemDto,
+  GRByTypeParams,
+  ReceiveItemRequest,
+} from "../types/purchase";
 
-export interface WarehousesByTypeRequest {
-  warehousetype: number;
-}
+const baseUrl = "/purchase";
 
-export interface WarehouseSimpleDto {
-  id: string;
-  name: string;
-}
+export const purchaseApi = {
+  // ── PO ──────────────────────────────────────────────────────────
+  getPO:    (id: string) => http.get<PurchaseOrderDto>(`${baseUrl}/po/${id}`),
+  getPOM0:  (id: string) => http.get<PurchaseOrderDto>(`${baseUrl}/pom0/${id}`),
+  getPOs:   (params?: PurchaseQueryParams) => http.get<PurchaseOrderDto[]>(`${baseUrl}/po`, { params }),
+  createPOs:(payload: PurchaseOrderCreateRequest) => http.post(`${baseUrl}/po`, payload),
+  createPO: (payload: PurchaseOrderDto) => http.post(`${baseUrl}/po`, payload),
+  approvePO:(id: string) => http.post(`${baseUrl}/po/${id}/approve`),
+  rejectPO: (id: string) => http.post(`${baseUrl}/po/${id}/reject`),
 
-export interface WarehousesByTypeResponse {
-  result: {
-    id: string;
-    name: string;
-    status: number;
-    warehouseType: number;
-  }[];
-}
+  // ── GR ──────────────────────────────────────────────────────────
+  getGR:   (id: string) => http.get<GoodsReceiptDto>(`${baseUrl}/gr/${id}`),
+  getGRs:  (params?: PurchaseQueryParams) => http.get<GoodsReceiptDto[]>(`${baseUrl}/gr`, { params }),
+  getGRsByType: (params: GRByTypeParams) => http.get<GoodsReceiptDto[]>(`${baseUrl}/grbytype`, { params }),
+  cancelGR:(id: string) => http.delete(`${baseUrl}/gr/${id}`),
+  createGR:(payload: ProductionGRCreateRequest) => http.post<GoodsReceiptDto>(`${baseUrl}/gr`, payload),
 
-export const warehouseApi = {
-  query: (
-    page: number,
-    pageSize: number,
-    q?: string,
-    sortBy: "name" | "createdAt" = "createdAt",
-    asc: boolean = false
-  ) =>
-    http.get<{ items: WarehouseDto[]; total: number }>("/Warehouses", {
-      params: { page, pageSize, q, sortBy, asc },
-    }),
+  // ── Receive ──────────────────────────────────────────────────────
+  ReceiveItem: (payload: ReceiveItemRequest) => http.post(`${baseUrl}/receive-item`, payload),
 
-  getById: (id: string) =>
-    http.get<WarehouseDto>(`/Warehouses/${id}`),
+  // ── Production GR ────────────────────────────────────────────────
+  approveProductionGR:  (payload: GoodsReceiptDto) => http.post<GoodsReceiptDto>(`${baseUrl}/gr-production-approve`, payload),
+  countingProductionGR: (payload: GoodsReceiptDto) => http.post<GoodsReceiptDto>(`${baseUrl}/gr-production-counting`, payload),
 
-  create: (dto: WarehouseCreateDto) =>
-    http.post("/Warehouses", dto),
+  // ── Scan & Receive ───────────────────────────────────────────────
+  // FIX: bỏ /purchase/ thừa — baseUrl đã là "/purchase"
 
-  getwarehouseid: (dto: WarehouseByIdDto) =>
-    http.get("/Warehouses/warehousebyid", { params: dto }),
+  // Đọc thông tin PO (không thay đổi DB)
+  scanPOInfo: (poCode: string) =>
+    http.get(`${baseUrl}/scan/${encodeURIComponent(poCode)}`),
 
-  getByWarehouseType: (dto: WarehousesByTypeRequest) =>
-    http.post<WarehousesByTypeResponse>("/Warehouses/warehousebytype", dto),
+  // Scan QR JSON → tạo PO mới + Approve + tạo GR trong 1 call
+  scanAndProcess: (payload: {
+    supplierId: number;
+    items: Array<{ productId: number; warehouseId: string; quantity: number; price: number }>;
+  }) =>
+    http.post(`${baseUrl}/scan-and-process`, payload),
 
-  update: (id: string, data: WarehouseUpdateDto) =>
-    http.put(`/Warehouses/${id}`, data),
-
-  delete: (id: string) =>
-    http.delete(`/Warehouses/${id}`),
-
-  lock: (id: string, reason?: string) =>
-    http.post(`/Warehouses/${id}/lock`, reason ? { reason } : {}),
-
-  unlock: (id: string) =>
-    http.post(`/Warehouses/${id}/unlock`),
+  // Scan mã PO đã tồn tại → Approve (nếu cần) + lấy GR
+  confirmScanReceive: (poCode: string) =>
+    http.post(`${baseUrl}/scan/${encodeURIComponent(poCode)}/confirm`),
 };

@@ -102,33 +102,34 @@ interface DashboardStats {
 
 /* ===================== CONSTANTS ===================== */
 
+// FIX: dùng numeric keys (0|1|2|3) cho khớp với WarehouseType = 0 | 1 | 2 | 3
 const WAREHOUSE_TYPE_CONFIG: Record<
   WarehouseType,
   { label: string; icon: React.ReactNode; color: string; bgColor: string; chartColor: string }
 > = {
-  RawMaterial: {
-    label: "Nguyên liệu thô",
+  0: {
+    label: "Kho nguyên vật liệu",
     icon: <InboxOutlined />,
     color: "#1677ff",
     bgColor: "#e6f4ff",
     chartColor: "#1677ff",
   },
-  FinishedGoods: {
-    label: "Thành phẩm",
+  1: {
+    label: "Kho thành phẩm",
     icon: <GoldOutlined />,
     color: "#52c41a",
     bgColor: "#f6ffed",
     chartColor: "#52c41a",
   },
-  Auxiliary: {
-    label: "Phụ trợ",
+  2: {
+    label: "Kho phụ liệu",
     icon: <BoxPlotOutlined />,
     color: "#fa8c16",
     bgColor: "#fff7e6",
     chartColor: "#fa8c16",
   },
-  Chemical: {
-    label: "Hóa chất",
+  3: {
+    label: "Kho hóa chất",
     icon: <ExperimentOutlined />,
     color: "#f5222d",
     bgColor: "#fff1f0",
@@ -256,10 +257,9 @@ function WarehouseTypeTab({ group, loading }: WarehouseTypeTabProps) {
 
   const paged = group.warehouses.slice((page - 1) * pageSize, page * pageSize);
 
-  // Bar chart data for this group
   const chartData = group.warehouses
     .filter((wh) => wh.totalQty > 0)
-    .slice(0, 15) // giới hạn 15 kho để chart dễ đọc
+    .slice(0, 15)
     .map((wh) => ({
       name: wh.warehouseName.replace("Kho Nhựa Kỹ Thuật", "KNK").trim(),
       "Tồn kho": Math.round(wh.totalQty),
@@ -273,7 +273,6 @@ function WarehouseTypeTab({ group, loading }: WarehouseTypeTabProps) {
 
   return (
     <div>
-      {/* Summary row */}
       <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
         <Col xs={8}>
           <Card
@@ -313,7 +312,6 @@ function WarehouseTypeTab({ group, loading }: WarehouseTypeTabProps) {
         </Col>
       </Row>
 
-      {/* Bar chart */}
       {group.warehouses.length > 0 && (
         <Card
           size="small"
@@ -336,7 +334,6 @@ function WarehouseTypeTab({ group, loading }: WarehouseTypeTabProps) {
         </Card>
       )}
 
-      {/* Warehouse list */}
       {paged.map((wh) => {
         const availPercent =
           wh.totalQty > 0 ? Math.round((wh.availableQty / wh.totalQty) * 100) : 0;
@@ -346,10 +343,7 @@ function WarehouseTypeTab({ group, loading }: WarehouseTypeTabProps) {
         return (
           <div
             key={wh.warehouseId}
-            style={{
-              padding: "12px 0",
-              borderBottom: "1px solid #f5f5f5",
-            }}
+            style={{ padding: "12px 0", borderBottom: "1px solid #f5f5f5" }}
           >
             <div
               style={{
@@ -426,7 +420,6 @@ function InventorySlideshow({ items, loading }: { items: InventorySlideItem[]; l
   useEffect(() => {
     if (items.length <= 1) return;
     const interval = setInterval(() => {
-      // fade out
       setVisible(false);
       setTimeout(() => {
         setCurrent(prev => (prev + 1) % items.length);
@@ -453,8 +446,6 @@ function InventorySlideshow({ items, loading }: { items: InventorySlideItem[]; l
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>Tồn kho theo sản phẩm</Text>
-
-          {/* Slideshow content */}
           <div
             style={{
               marginTop: 4,
@@ -465,29 +456,10 @@ function InventorySlideshow({ items, loading }: { items: InventorySlideItem[]; l
           >
             {item ? (
               <>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "#08979c",
-                    fontWeight: 600,
-                    marginBottom: 2,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
+                <div style={{ fontSize: 11, color: "#08979c", fontWeight: 600, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {item.productCode}
                 </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#595959",
-                    marginBottom: 4,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
+                <div style={{ fontSize: 12, color: "#595959", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {item.productName}
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: "#13c2c2", lineHeight: 1.1 }}>
@@ -505,25 +477,10 @@ function InventorySlideshow({ items, loading }: { items: InventorySlideItem[]; l
             )}
           </div>
         </div>
-
-        {/* Icon + progress dots */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              background: "#b5f5ec",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 22,
-              color: "#13c2c2",
-            }}
-          >
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#b5f5ec", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#13c2c2" }}>
             <BoxPlotOutlined />
           </div>
-          {/* Dots indicator */}
           {items.length > 1 && (
             <div style={{ display: "flex", gap: 3, flexWrap: "wrap", maxWidth: 44, justifyContent: "center" }}>
               {items.slice(0, Math.min(items.length, 8)).map((_, i) => (
@@ -581,8 +538,6 @@ export default function Dashboard() {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      // ── Helper: extract array từ bất kỳ cấu trúc response nào ──
-      // Hỗ trợ: [], { items }, { data }, { data: { items } }, { result }
       const extractArray = (res: any): any[] => {
         const r = res?.data ?? res;
         if (Array.isArray(r)) return r;
@@ -594,14 +549,10 @@ export default function Dashboard() {
         return [];
       };
 
-      // ── Helper: extract paged response ──
       const extractPaged = (res: any): { items: any[]; total: number } => {
         const r = res?.data ?? res;
-        // { items, total }
         if (Array.isArray(r?.items)) return { items: r.items, total: r.total ?? r.items.length };
-        // { data: { items, total } }
         if (Array.isArray(r?.data?.items)) return { items: r.data.items, total: r.data.total ?? r.data.items.length };
-        // plain array
         if (Array.isArray(r)) return { items: r, total: r.length };
         console.warn("[Dashboard] extractPaged: unknown shape", r);
         return { items: [], total: 0 };
@@ -609,15 +560,11 @@ export default function Dashboard() {
 
       // 1. Warehouses
       const whRes = await warehouseApi.query(1, 1000);
-      console.log("[Dashboard] whRes.data:", whRes.data);
       const { items: warehouses } = extractPaged(whRes);
-      console.log("[Dashboard] warehouses:", warehouses.length, warehouses[0]);
 
       // 2. Inventory
       const invRes = await inventoryApi.query({});
-      console.log("[Dashboard] invRes.data:", invRes.data);
       const inventories: InventoryDto[] = extractArray(invRes);
-      console.log("[Dashboard] inventories:", inventories.length, inventories[0]);
 
       // 3. Products
       const productRes = await productApi.getAll();
@@ -625,18 +572,9 @@ export default function Dashboard() {
       const totalProducts = productArr.length;
 
       // 4. Sales Orders
-      const salesRes = await salesApi.query({
-        page: 1,
-        pageSize: 10,
-        sortBy: "createdAt",
-        asc: false,
-      });
-      console.log("[Dashboard] salesRes.data:", salesRes.data);
+      const salesRes = await salesApi.query({ page: 1, pageSize: 10, sortBy: "createdAt", asc: false });
       const { items: orders } = extractPaged(salesRes);
-      console.log("[Dashboard] orders:", orders.length, orders[0]);
-      const pendingOrders = orders.filter((o: any) =>
-        ["Pending", "Processing", "0", 0].includes(o.status)
-      ).length;
+      const pendingOrders = orders.filter((o: any) => ["Pending", "Processing", "0", 0].includes(o.status)).length;
       const totalSalesAmount = orders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
 
       // 5. Purchase Orders
@@ -644,11 +582,8 @@ export default function Dashboard() {
       let pendingPOs = 0;
       try {
         const poRes = await purchaseApi.getPOs({ page: 1, pageSize: 10 });
-        console.log("[Dashboard] poRes.data:", poRes.data);
         recentPOList = extractArray(poRes);
-        pendingPOs = recentPOList.filter((p: any) =>
-          ["Pending", "0", 0].includes(p.status)
-        ).length;
+        pendingPOs = recentPOList.filter((p: any) => ["Pending", "0", 0].includes(p.status)).length;
       } catch (e) { console.warn("[Dashboard] PO fetch failed:", e); }
 
       // 6. Goods Receipts
@@ -656,42 +591,24 @@ export default function Dashboard() {
       let pendingGRs = 0;
       try {
         const grRes = await purchaseApi.getGRs({ page: 1, pageSize: 10 });
-        console.log("[Dashboard] grRes.data:", grRes.data);
         recentGRList = extractArray(grRes);
-        pendingGRs = recentGRList.filter((g: any) =>
-          [0, "0", "Pending"].includes(g.status)
-        ).length;
+        pendingGRs = recentGRList.filter((g: any) => [0, "0", "Pending"].includes(g.status)).length;
       } catch (e) { console.warn("[Dashboard] GR fetch failed:", e); }
 
-      // DEBUG: log warehouse type values
-      console.log("[Dashboard] sample warehouse warehouseType values:",
-        warehouses.slice(0, 5).map((w: any) => ({ name: w.name, type: w.warehouseType, typeOf: typeof w.warehouseType }))
-      );
-
-      // Map: số enum → string key (phòng trường hợp BE trả number)
-      const WAREHOUSE_TYPE_NUM_MAP: Record<number, WarehouseType> = {
-        0: "RawMaterial",
-        1: "FinishedGoods",
-        2: "Auxiliary",
-        3: "Chemical",
-      };
-
+      // FIX: normalizeWarehouseType — BE có thể trả string hoặc number, đều normalize về WarehouseType (0|1|2|3)
       const normalizeWarehouseType = (raw: any): WarehouseType | null => {
-        if (typeof raw === "string" && raw in WAREHOUSE_TYPE_CONFIG) return raw as WarehouseType;
-        if (typeof raw === "number" && raw in WAREHOUSE_TYPE_NUM_MAP) return WAREHOUSE_TYPE_NUM_MAP[raw];
-        // Thử parse nếu là string số "0", "1",...
+        // Nếu đã là number hợp lệ
+        if (typeof raw === "number" && [0, 1, 2, 3].includes(raw)) return raw as WarehouseType;
+        // Nếu là string số "0","1","2","3"
         const num = parseInt(raw, 10);
-        if (!isNaN(num) && num in WAREHOUSE_TYPE_NUM_MAP) return WAREHOUSE_TYPE_NUM_MAP[num];
+        if (!isNaN(num) && [0, 1, 2, 3].includes(num)) return num as WarehouseType;
         return null;
       };
 
-      // 7. Build warehouse type groups
-      const groups: WarehouseTypeGroup[] = (
-        ["RawMaterial", "FinishedGoods", "Auxiliary", "Chemical"] as WarehouseType[]
-      ).map((type) => {
+      // FIX: dùng [0,1,2,3] as WarehouseType[] thay vì string array
+      const groups: WarehouseTypeGroup[] = ([0, 1, 2, 3] as WarehouseType[]).map((type) => {
         const cfg = WAREHOUSE_TYPE_CONFIG[type];
         const whOfType = warehouses.filter((w: any) => normalizeWarehouseType(w.warehouseType) === type);
-        console.log(`[Dashboard] type=${type} → ${whOfType.length} warehouses`);
 
         const summaries: WarehouseInventorySummary[] = whOfType.map((wh: any) => {
           const whItems = inventories.filter((i) => i.warehouseId === wh.id);
@@ -709,10 +626,6 @@ export default function Dashboard() {
           };
         });
 
-        const totalQty = summaries.reduce((s, w) => s + w.totalQty, 0);
-        const availableQty = summaries.reduce((s, w) => s + w.availableQty, 0);
-        const lockedQty = summaries.reduce((s, w) => s + w.lockedQty, 0);
-
         return {
           type,
           label: cfg.label,
@@ -720,13 +633,13 @@ export default function Dashboard() {
           color: cfg.color,
           bgColor: cfg.bgColor,
           warehouses: summaries,
-          totalQty,
-          availableQty,
-          lockedQty,
+          totalQty: summaries.reduce((s, w) => s + w.totalQty, 0),
+          availableQty: summaries.reduce((s, w) => s + w.availableQty, 0),
+          lockedQty: summaries.reduce((s, w) => s + w.lockedQty, 0),
         };
       });
 
-      // 8. Inventory pie data
+      // Pie data
       const pieData = groups
         .filter((g) => g.totalQty > 0)
         .map((g) => ({
@@ -760,18 +673,11 @@ export default function Dashboard() {
       setRecentGRs(recentGRList.slice(0, 5));
       setInventoryByType(pieData);
 
-      // 9. Inventory by product (for slideshow)
+      // Inventory by product (slideshow)
       const productMap = new Map<number, { productId: number; productCode: string; productName: string; totalQty: number; availableQty: number; warehouses: Set<string> }>();
       for (const inv of inventories) {
         if (!productMap.has(inv.productId)) {
-          productMap.set(inv.productId, {
-            productId: inv.productId,
-            productCode: inv.productCode,
-            productName: inv.productName,
-            totalQty: 0,
-            availableQty: 0,
-            warehouses: new Set(),
-          });
+          productMap.set(inv.productId, { productId: inv.productId, productCode: inv.productCode, productName: inv.productName, totalQty: 0, availableQty: 0, warehouses: new Set() });
         }
         const p = productMap.get(inv.productId)!;
         p.totalQty += inv.onHandQuantity;
@@ -800,19 +706,10 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: "0 4px" }}>
-      {/* ===== HEADER ===== */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-        }}
-      >
+      {/* HEADER */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>
-            Tổng quan hệ thống
-          </Title>
+          <Title level={4} style={{ margin: 0 }}>Tổng quan hệ thống</Title>
           <Text type="secondary" style={{ fontSize: 12 }}>
             Cập nhật lần cuối: {lastRefresh.toLocaleTimeString("vi-VN")}
           </Text>
@@ -820,162 +717,84 @@ export default function Dashboard() {
         <Tooltip title="Làm mới dữ liệu">
           <div
             onClick={loadDashboardData}
-            style={{
-              cursor: "pointer",
-              padding: "6px 14px",
-              background: "#f5f5f5",
-              borderRadius: 8,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 13,
-              color: "#595959",
-              border: "1px solid #e8e8e8",
-            }}
+            style={{ cursor: "pointer", padding: "6px 14px", background: "#f5f5f5", borderRadius: 8, display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#595959", border: "1px solid #e8e8e8" }}
           >
             <ReloadOutlined spin={loading} /> Làm mới
           </div>
         </Tooltip>
       </div>
 
-      {/* ===== TOP STATS ROW 1: Core KPIs ===== */}
+      {/* TOP STATS */}
       <Row gutter={[12, 12]}>
         <Col xs={12} sm={8} md={4}>
-          <StatCard
-            title="Sản phẩm"
-            value={stats.totalProducts}
-            prefix={<DatabaseOutlined />}
-            loading={loading}
-            color="#1677ff"
-          />
+          <StatCard title="Sản phẩm" value={stats.totalProducts} prefix={<DatabaseOutlined />} loading={loading} color="#1677ff" />
         </Col>
         <Col xs={12} sm={8} md={4}>
-          <StatCard
-            title="Kho hàng"
-            value={stats.totalWarehouses}
-            prefix={<HomeOutlined />}
-            loading={loading}
-            color="#722ed1"
-          />
+          <StatCard title="Kho hàng" value={stats.totalWarehouses} prefix={<HomeOutlined />} loading={loading} color="#722ed1" />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <InventorySlideshow items={inventoryByProduct} loading={loading} />
         </Col>
         <Col xs={12} sm={8} md={4}>
-          <StatCard
-            title="Đơn hàng"
-            value={stats.totalOrders}
-            prefix={<ShoppingCartOutlined />}
-            loading={loading}
-            color="#52c41a"
-            subValue={`Chờ xử lý: ${stats.pendingOrders}`}
-          />
+          <StatCard title="Đơn hàng" value={stats.totalOrders} prefix={<ShoppingCartOutlined />} loading={loading} color="#52c41a" subValue={`Chờ xử lý: ${stats.pendingOrders}`} />
         </Col>
         <Col xs={12} sm={8} md={4}>
-          <StatCard
-            title="Đặt hàng (PO)"
-            value={stats.totalPOs}
-            prefix={<InboxOutlined />}
-            loading={loading}
-            color="#fa8c16"
-            subValue={`Chờ duyệt: ${stats.pendingPOs}`}
-          />
+          <StatCard title="Đặt hàng (PO)" value={stats.totalPOs} prefix={<InboxOutlined />} loading={loading} color="#fa8c16" subValue={`Chờ duyệt: ${stats.pendingPOs}`} />
         </Col>
         <Col xs={12} sm={8} md={4}>
-          <StatCard
-            title="Phiếu nhập (GR)"
-            value={stats.totalGRs}
-            prefix={<FireOutlined />}
-            loading={loading}
-            color="#f5222d"
-            subValue={`Chờ xử lý: ${stats.pendingGRs}`}
-          />
+          <StatCard title="Phiếu nhập (GR)" value={stats.totalGRs} prefix={<FireOutlined />} loading={loading} color="#f5222d" subValue={`Chờ xử lý: ${stats.pendingGRs}`} />
         </Col>
       </Row>
 
-      {/* ===== INVENTORY DETAIL ROW ===== */}
+      {/* INVENTORY DETAIL */}
       <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
         <Col xs={8}>
-          <Card
-            loading={loading}
-            size="small"
-            style={{
-              borderRadius: 10,
-              background: "linear-gradient(135deg, #e6f4ff 0%, #f0f9ff 100%)",
-              border: "1px solid #91caff",
-            }}
-          >
+          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #e6f4ff 0%, #f0f9ff 100%)", border: "1px solid #91caff" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <CheckCircleOutlined style={{ color: "#1677ff", fontSize: 22 }} />
               <div>
                 <div style={{ fontSize: 11, color: "#595959" }}>Tồn kho khả dụng</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#1677ff" }}>
-                  {stats.availableInventory.toLocaleString()}
-                </div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#1677ff" }}>{stats.availableInventory.toLocaleString()}</div>
               </div>
             </div>
           </Card>
         </Col>
         <Col xs={8}>
-          <Card
-            loading={loading}
-            size="small"
-            style={{
-              borderRadius: 10,
-              background: "linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)",
-              border: "1px solid #ffd591",
-            }}
-          >
+          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)", border: "1px solid #ffd591" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <WarningOutlined style={{ color: "#fa8c16", fontSize: 22 }} />
               <div>
                 <div style={{ fontSize: 11, color: "#595959" }}>Đang bị khóa</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#fa8c16" }}>
-                  {stats.lockedInventory.toLocaleString()}
-                </div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#fa8c16" }}>{stats.lockedInventory.toLocaleString()}</div>
               </div>
             </div>
           </Card>
         </Col>
         <Col xs={8}>
-          <Card
-            loading={loading}
-            size="small"
-            style={{
-              borderRadius: 10,
-              background: "linear-gradient(135deg, #f9f0ff 0%, #fff 100%)",
-              border: "1px solid #d3adf7",
-            }}
-          >
+          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #f9f0ff 0%, #fff 100%)", border: "1px solid #d3adf7" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <ClockCircleOutlined style={{ color: "#722ed1", fontSize: 22 }} />
               <div>
                 <div style={{ fontSize: 11, color: "#595959" }}>Doanh thu mẫu</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "#722ed1", lineHeight: 1.3 }}>
-                  {formatCurrency(stats.totalSalesAmount)}
-                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#722ed1", lineHeight: 1.3 }}>{formatCurrency(stats.totalSalesAmount)}</div>
               </div>
             </div>
           </Card>
         </Col>
       </Row>
 
-      {/* ===== MAIN CONTENT ===== */}
+      {/* MAIN CONTENT */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {/* LEFT: Warehouse breakdown by type */}
+        {/* LEFT: Warehouse breakdown */}
         <Col xs={24} lg={14}>
           <Card
-            title={
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <HomeOutlined />
-                <span>Tồn kho theo loại kho</span>
-              </div>
-            }
+            title={<div style={{ display: "flex", alignItems: "center", gap: 8 }}><HomeOutlined /><span>Tồn kho theo loại kho</span></div>}
             style={{ borderRadius: 12, height: "100%" }}
             loading={loading}
           >
+            {/* FIX: defaultActiveKey dùng string "0" cho khớp với key={String(group.type)} */}
             <Tabs
-              defaultActiveKey="RawMaterial"
+              defaultActiveKey="0"
               tabBarExtraContent={
                 <Text type="secondary" style={{ fontSize: 11 }}>
                   {warehouseTypeGroups.reduce((s, g) => s + g.warehouses.length, 0)} kho tổng
@@ -985,21 +804,15 @@ export default function Dashboard() {
               {warehouseTypeGroups.map((group) => {
                 const cfg = WAREHOUSE_TYPE_CONFIG[group.type];
                 return (
+                  // FIX: key phải là string, dùng String(group.type) → "0","1","2","3"
                   <TabPane
-                    key={group.type}
+                    key={String(group.type)}
                     tab={
                       <span>
                         <span style={{ color: group.color, marginRight: 4 }}>{group.icon}</span>
                         {cfg.label}
                         {group.warehouses.length > 0 && (
-                          <Badge
-                            count={group.warehouses.length}
-                            style={{
-                              marginLeft: 6,
-                              backgroundColor: group.color,
-                              fontSize: 10,
-                            }}
-                          />
+                          <Badge count={group.warehouses.length} style={{ marginLeft: 6, backgroundColor: group.color, fontSize: 10 }} />
                         )}
                       </span>
                     }
@@ -1012,46 +825,21 @@ export default function Dashboard() {
           </Card>
         </Col>
 
-        {/* RIGHT: Pie chart + quick stats */}
+        {/* RIGHT: Pie + summary */}
         <Col xs={24} lg={10}>
           <Row gutter={[0, 16]}>
-            {/* Pie chart */}
             <Col xs={24}>
-              <Card
-                title="Phân bổ tồn kho"
-                style={{ borderRadius: 12 }}
-                loading={loading}
-              >
+              <Card title="Phân bổ tồn kho" style={{ borderRadius: 12 }} loading={loading}>
                 {inventoryByType.length > 0 ? (
                   <ResponsiveContainer width="100%" height={220}>
                     <PieChart>
-                      <Pie
-                        data={inventoryByType}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        innerRadius={45}
-                        dataKey="value"
-                        label={({ name, percent }) =>
-                          `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-                        }
-                        labelLine={false}
-                      >
+                      <Pie data={inventoryByType} cx="50%" cy="50%" outerRadius={80} innerRadius={45} dataKey="value" label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
                         {inventoryByType.map((entry, index) => (
                           <Cell key={index} fill={entry.color} />
                         ))}
                       </Pie>
-                      <RechartsTooltip
-                        formatter={(val: number | undefined) => [
-                          (val ?? 0).toLocaleString(),
-                          "Số lượng",
-                        ]}
-                      />
-                      <Legend
-                        formatter={(value) => (
-                          <span style={{ fontSize: 12 }}>{value}</span>
-                        )}
-                      />
+                      <RechartsTooltip formatter={(val: number | undefined) => [(val ?? 0).toLocaleString(), "Số lượng"]} />
+                      <Legend formatter={(value) => <span style={{ fontSize: 12 }}>{value}</span>} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -1059,58 +847,24 @@ export default function Dashboard() {
                 )}
               </Card>
             </Col>
-
-            {/* Warehouse type summary cards */}
             <Col xs={24}>
-              <Card
-                title="Tổng hợp theo loại kho"
-                size="small"
-                style={{ borderRadius: 12 }}
-                loading={loading}
-              >
+              <Card title="Tổng hợp theo loại kho" size="small" style={{ borderRadius: 12 }} loading={loading}>
                 {warehouseTypeGroups.map((g) => {
                   const cfg = WAREHOUSE_TYPE_CONFIG[g.type];
                   return (
-                    <div
-                      key={g.type}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 0",
-                        borderBottom: "1px solid #f5f5f5",
-                      }}
-                    >
+                    <div key={g.type} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f5f5f5" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: 6,
-                            background: g.bgColor,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: g.color,
-                            fontSize: 14,
-                          }}
-                        >
+                        <div style={{ width: 28, height: 28, borderRadius: 6, background: g.bgColor, display: "flex", alignItems: "center", justifyContent: "center", color: g.color, fontSize: 14 }}>
                           {g.icon}
                         </div>
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 500 }}>{cfg.label}</div>
-                          <div style={{ fontSize: 11, color: "#8c8c8c" }}>
-                            {g.warehouses.length} kho
-                          </div>
+                          <div style={{ fontSize: 11, color: "#8c8c8c" }}>{g.warehouses.length} kho</div>
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: g.color }}>
-                          {g.totalQty.toLocaleString()}
-                        </div>
-                        <div style={{ fontSize: 11, color: "#52c41a" }}>
-                          KD: {g.availableQty.toLocaleString()}
-                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: g.color }}>{g.totalQty.toLocaleString()}</div>
+                        <div style={{ fontSize: 11, color: "#52c41a" }}>KD: {g.availableQty.toLocaleString()}</div>
                       </div>
                     </div>
                   );
@@ -1121,152 +875,73 @@ export default function Dashboard() {
         </Col>
       </Row>
 
-      {/* ===== BOTTOM: Recent Orders + PO + GR ===== */}
+      {/* BOTTOM: Recent lists */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         {/* Sales Orders */}
         <Col xs={24} md={8}>
           <Card
-            title={
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>
-                  <ShoppingCartOutlined style={{ marginRight: 6 }} />
-                  Đơn hàng gần đây
-                </span>
-                {stats.pendingOrders > 0 && (
-                  <Badge count={stats.pendingOrders} color="orange" />
-                )}
-              </div>
-            }
+            title={<div style={{ display: "flex", justifyContent: "space-between" }}><span><ShoppingCartOutlined style={{ marginRight: 6 }} />Đơn hàng gần đây</span>{stats.pendingOrders > 0 && <Badge count={stats.pendingOrders} color="orange" />}</div>}
             style={{ borderRadius: 12 }}
             loading={loading}
           >
-            {recentOrders.length === 0 ? (
-              <Empty description="Không có đơn hàng" />
-            ) : (
-              recentOrders.map((order) => (
-                <div
-                  key={order.id}
-                  style={{
-                    padding: "8px 0",
-                    borderBottom: "1px solid #f5f5f5",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{order.code}</div>
-                    <div style={{ fontSize: 11, color: "#8c8c8c" }}>{order.customerName}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    {getStatusTag(order.status)}
-                    <div style={{ fontSize: 12, color: "#595959", marginTop: 2 }}>
-                      {(order.totalAmount || 0).toLocaleString("vi-VN")} đ
-                    </div>
-                  </div>
+            {recentOrders.length === 0 ? <Empty description="Không có đơn hàng" /> : recentOrders.map((order) => (
+              <div key={order.id} style={{ padding: "8px 0", borderBottom: "1px solid #f5f5f5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{order.code}</div>
+                  <div style={{ fontSize: 11, color: "#8c8c8c" }}>{order.customerName}</div>
                 </div>
-              ))
-            )}
+                <div style={{ textAlign: "right" }}>
+                  {getStatusTag(order.status)}
+                  <div style={{ fontSize: 12, color: "#595959", marginTop: 2 }}>{(order.totalAmount || 0).toLocaleString("vi-VN")} đ</div>
+                </div>
+              </div>
+            ))}
           </Card>
         </Col>
 
         {/* Purchase Orders */}
         <Col xs={24} md={8}>
           <Card
-            title={
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>
-                  <InboxOutlined style={{ marginRight: 6 }} />
-                  Đặt hàng (PO) gần đây
-                </span>
-                {stats.pendingPOs > 0 && (
-                  <Badge count={stats.pendingPOs} color="blue" />
-                )}
-              </div>
-            }
+            title={<div style={{ display: "flex", justifyContent: "space-between" }}><span><InboxOutlined style={{ marginRight: 6 }} />Đặt hàng (PO) gần đây</span>{stats.pendingPOs > 0 && <Badge count={stats.pendingPOs} color="blue" />}</div>}
             style={{ borderRadius: 12 }}
             loading={loading}
           >
-            {recentPOs.length === 0 ? (
-              <Empty description="Không có PO nào" />
-            ) : (
-              recentPOs.map((po) => (
-                <div
-                  key={po.id}
-                  style={{
-                    padding: "8px 0",
-                    borderBottom: "1px solid #f5f5f5",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{po.code}</div>
-                    <div style={{ fontSize: 11, color: "#8c8c8c" }}>
-                      {po.supplier?.name || "—"}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    {getStatusTag(po.status || "Pending")}
-                    <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>
-                      {new Date(po.createdAt).toLocaleDateString("vi-VN")}
-                    </div>
-                  </div>
+            {recentPOs.length === 0 ? <Empty description="Không có PO nào" /> : recentPOs.map((po) => (
+              <div key={po.id} style={{ padding: "8px 0", borderBottom: "1px solid #f5f5f5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{po.code}</div>
+                  <div style={{ fontSize: 11, color: "#8c8c8c" }}>{po.supplier?.name || "—"}</div>
                 </div>
-              ))
-            )}
+                <div style={{ textAlign: "right" }}>
+                  {getStatusTag(po.status || "Pending")}
+                  <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>{new Date(po.createdAt).toLocaleDateString("vi-VN")}</div>
+                </div>
+              </div>
+            ))}
           </Card>
         </Col>
 
         {/* Goods Receipts */}
         <Col xs={24} md={8}>
           <Card
-            title={
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>
-                  <FireOutlined style={{ marginRight: 6 }} />
-                  Phiếu nhập (GR) gần đây
-                </span>
-                {stats.pendingGRs > 0 && (
-                  <Badge count={stats.pendingGRs} color="red" />
-                )}
-              </div>
-            }
+            title={<div style={{ display: "flex", justifyContent: "space-between" }}><span><FireOutlined style={{ marginRight: 6 }} />Phiếu nhập (GR) gần đây</span>{stats.pendingGRs > 0 && <Badge count={stats.pendingGRs} color="red" />}</div>}
             style={{ borderRadius: 12 }}
             loading={loading}
           >
-            {recentGRs.length === 0 ? (
-              <Empty description="Không có phiếu nhập nào" />
-            ) : (
-              recentGRs.map((gr) => (
-                <div
-                  key={gr.id}
-                  style={{
-                    padding: "8px 0",
-                    borderBottom: "1px solid #f5f5f5",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{gr.code}</div>
-                    <div style={{ fontSize: 11, color: "#8c8c8c" }}>
-                      {gr.receiptType === 0 ? "Mua hàng" : "Sản xuất"}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <Tag color={gr.status === 0 ? "orange" : gr.status === 1 ? "blue" : "green"}>
-                      {gr.status === 0 ? "Chờ xử lý" : gr.status === 1 ? "Đang xử lý" : "Hoàn thành"}
-                    </Tag>
-                    <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>
-                      {new Date(gr.createdAt).toLocaleDateString("vi-VN")}
-                    </div>
-                  </div>
+            {recentGRs.length === 0 ? <Empty description="Không có phiếu nhập nào" /> : recentGRs.map((gr) => (
+              <div key={gr.id} style={{ padding: "8px 0", borderBottom: "1px solid #f5f5f5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{gr.code}</div>
+                  <div style={{ fontSize: 11, color: "#8c8c8c" }}>{gr.receiptType === 0 ? "Mua hàng" : "Sản xuất"}</div>
                 </div>
-              ))
-            )}
+                <div style={{ textAlign: "right" }}>
+                  <Tag color={gr.status === 0 ? "orange" : gr.status === 1 ? "blue" : "green"}>
+                    {gr.status === 0 ? "Chờ xử lý" : gr.status === 1 ? "Đang xử lý" : "Hoàn thành"}
+                  </Tag>
+                  <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>{new Date(gr.createdAt).toLocaleDateString("vi-VN")}</div>
+                </div>
+              </div>
+            ))}
           </Card>
         </Col>
       </Row>
