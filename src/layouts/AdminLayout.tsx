@@ -148,30 +148,30 @@ export default function AdminLayout() {
             </Menu.SubMenu>
 
             {/* PURCHASE */}
-<Menu.SubMenu key="purchase" icon={<ShoppingCartOutlined />} title="PURCHASE">
-  <Menu.Item key="purchase-list">
+<Menu.SubMenu key="purchase" icon={<ShoppingCartOutlined />} title="NHẬP HÀNG">
+  {/* <Menu.Item key="purchase-list">
     <Link to="/purchase">Purchase List</Link>
-  </Menu.Item>
+  </Menu.Item> */}
 
   <Menu.Divider />
   <Menu.Item key="gr-list">
-    <Link to="/goodsreceipt">Goods Receipt List</Link>
+    <Link to="/goodsreceipt">DANH SÁCH ĐƠN NHẬP</Link>
   </Menu.Item>
 
 </Menu.SubMenu>
 
 {/* SALES */}
-<Menu.SubMenu key="sales" icon={<FileTextOutlined />} title="SALES">
+<Menu.SubMenu key="sales" icon={<FileTextOutlined />} title="XUẤT HÀNG">
   {/* Sale Orders */}
-  <Menu.Item key="sales-orders-list">
+  {/* <Menu.Item key="sales-orders-list">
     <Link to="/sales/orders">Sale Orders List</Link>
-  </Menu.Item>
+  </Menu.Item> */}
 
   <Menu.Divider />
 
   {/* Goods Issue */}
   <Menu.Item key="sales-goods-issue-list">
-    <Link to="/sales/goods-issue">Goods Issue List</Link>
+    <Link to="/sales/goods-issue">DANH SÁCH ĐƠN XUẤT</Link>
   </Menu.Item>
   {/* <Menu.Item key="sales-goods-issue-create">
     <Link to="/sales/goods-issue/create">Create Goods Issue</Link>

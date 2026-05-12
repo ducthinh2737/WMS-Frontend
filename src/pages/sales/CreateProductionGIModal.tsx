@@ -18,40 +18,54 @@ export default function CreateProductionGIModal({
   onSuccess,
 }: any) {
   const [form] = Form.useForm();
+
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // =========================
+  // LOAD DATA
+  // =========================
   useEffect(() => {
     if (!open) return;
 
+    // ✅ GET ALL WAREHOUSES
     warehouseApi
-      .getByWarehouseType({ warehousetype: 0 }) // RawMaterial
-      .then((res) => setWarehouses(res.data.result || []));
+      .query(1, 1000)
+      .then((res) => {
+        setWarehouses(res.data.items || []);
+      });
 
+    // PRODUCTS
     productApi
-      .getAllByType(0)
-      .then((res) => setProducts(res.data.filter((p: any) => p.isActive)));
+      .getAll()
+      .then((res) =>
+        setProducts(res.data.filter((p: any) => p.isActive))
+      );
   }, [open]);
 
+  // =========================
+  // SUBMIT
+  // =========================
   const submit = async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
 
       await salesApi.createProductionGI({
-  warehouseId: values.warehouseId,
-  items: values.items.map((i: any) => ({
-    productId: i.productId,
-    quantity: i.quantity,
-  })),
-});
-
+        warehouseId: values.warehouseId,
+        items: values.items.map((i: any) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+        })),
+      });
 
       message.success("Tạo GI sản xuất thành công");
+
       form.resetFields();
       onSuccess();
-    } catch {
+    } catch (err) {
+      console.error(err);
       message.error("Tạo GI thất bại");
     } finally {
       setLoading(false);
@@ -66,14 +80,25 @@ export default function CreateProductionGIModal({
       onOk={submit}
       confirmLoading={loading}
       destroyOnClose
+      width={700}
     >
-      <Form form={form} layout="vertical">
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ items: [{}] }}
+      >
+        {/* ===================== WAREHOUSE ===================== */}
         <Form.Item
           name="warehouseId"
-          label="Kho nguyên liệu"
-          rules={[{ required: true }]}
+          label="Kho"
+          rules={[
+            {
+              required: true,
+              message: "Vui lòng chọn kho",
+            },
+          ]}
         >
-          <Select>
+          <Select placeholder="Chọn kho">
             {warehouses.map((w) => (
               <Select.Option key={w.id} value={w.id}>
                 {w.name}
@@ -82,38 +107,88 @@ export default function CreateProductionGIModal({
           </Select>
         </Form.Item>
 
-        <Form.List name="items" initialValue={[{}]}>
+        {/* ===================== ITEMS ===================== */}
+        <Form.List name="items">
           {(fields, { add, remove }) => (
             <>
               {fields.map(({ key, name }) => (
-                <Space key={key}>
+                <Space
+                  key={key}
+                  align="baseline"
+                  style={{
+                    display: "flex",
+                    marginBottom: 8,
+                  }}
+                >
+                  {/* PRODUCT */}
                   <Form.Item
                     name={[name, "productId"]}
-                    rules={[{ required: true }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: "Chọn sản phẩm",
+                      },
+                    ]}
                   >
-                    <Select style={{ width: 240 }}>
-                      {products.map((p) => (
-                        <Select.Option key={p.id} value={p.id}>
-                          {p.code} - {p.name}
-                        </Select.Option>
-                      ))}
+                    <Select
+                      style={{ width: 380 }}
+                      placeholder="Chọn sản phẩm"
+                      showSearch
+                      optionFilterProp="children"
+                    >
+                      <Select.OptGroup label="Nguyên vật liệu">
+                        {products
+                          .filter((p) => p.type === 0)
+                          .map((p) => (
+                            <Select.Option key={p.id} value={p.id}>
+                              {p.code} - {p.name}
+                            </Select.Option>
+                          ))}
+                      </Select.OptGroup>
+
+                      <Select.OptGroup label="Thành phẩm">
+                        {products
+                          .filter((p) => p.type === 1)
+                          .map((p) => (
+                            <Select.Option key={p.id} value={p.id}>
+                              {p.code} - {p.name}
+                            </Select.Option>
+                          ))}
+                      </Select.OptGroup>
                     </Select>
                   </Form.Item>
 
+                  {/* QUANTITY */}
                   <Form.Item
                     name={[name, "quantity"]}
-                    rules={[{ required: true }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: "Nhập SL",
+                      },
+                    ]}
                   >
-                    <InputNumber min={1} />
+                    <InputNumber
+                      min={1}
+                      placeholder="SL"
+                      style={{ width: 100 }}
+                    />
                   </Form.Item>
 
+                  {/* REMOVE */}
                   <Button danger onClick={() => remove(name)}>
                     X
                   </Button>
                 </Space>
               ))}
-              <Button block type="dashed" onClick={() => add()}>
-                + Thêm NVL
+
+              {/* ADD */}
+              <Button
+                block
+                type="dashed"
+                onClick={() => add()}
+              >
+                + Thêm sản phẩm
               </Button>
             </>
           )}

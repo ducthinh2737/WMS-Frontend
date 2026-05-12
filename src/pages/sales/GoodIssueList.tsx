@@ -1,8 +1,6 @@
-// src/pages/sales/GoodsIssueList.tsx
 import {
   Table,
   Button,
-  Tabs,
   Space,
   Tag,
   Popconfirm,
@@ -15,7 +13,6 @@ import CreateProductionGIModal from "./CreateProductionGIModal";
 
 // ===== ENUM =====
 const GIType = {
-  Sale: 0,
   Production: 1,
 } as const;
 
@@ -26,8 +23,12 @@ const GIStatus = {
   Completed: 3,
   Rejected: 4,
   Picking: 5,
+
+  OutOfStock: 6,
+  InsufficientStock: 7,
 } as const;
 
+// ===== STATUS MAP =====
 const StatusMap: Record<number, { label: string; color: string }> = {
   0: { label: "Chờ xử lý", color: "orange" },
   1: { label: "Đã duyệt", color: "blue" },
@@ -35,34 +36,39 @@ const StatusMap: Record<number, { label: string; color: string }> = {
   3: { label: "Hoàn thành", color: "green" },
   4: { label: "Từ chối", color: "red" },
   5: { label: "Đang picking", color: "purple" },
+
+  6: { label: "Hết hàng", color: "volcano" },
+  7: { label: "Không đủ hàng", color: "gold" },
 };
 
-type TabKey = "sale" | "production";
-
 export default function GoodsIssueList() {
-  const [activeTab, setActiveTab] = useState<TabKey>("sale");
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [selectedGIId, setSelectedGIId] = useState<string | null>(null);
+  const [selectedGIId, setSelectedGIId] =
+    useState<string | null>(null);
+
   const [openDetail, setOpenDetail] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
 
+  // ===== LOAD =====
   useEffect(() => {
-    setList([]);
-    setSelectedGIId(null);
-    setOpenDetail(false);
-    setOpenCreate(false);
     fetchGIs();
-  }, [activeTab]);
+  }, []);
 
+  // ===== FETCH =====
   const fetchGIs = async () => {
     setLoading(true);
+
     try {
-      const type = activeTab === "sale" ? GIType.Sale : GIType.Production;
-      const res = await salesApi.queryGI({ type });
-      // Filter cứng ở FE (nếu backend chưa lọc)
-      const filtered = (res.data || []).filter((x: any) => x.type === type);
+      const res = await salesApi.queryGI({
+        type: GIType.Production,
+      });
+
+      const filtered = (res.data || []).filter(
+        (x: any) => x.type === GIType.Production
+      );
+
       setList(filtered);
     } catch {
       message.error("Không tải được danh sách GI");
@@ -71,76 +77,156 @@ export default function GoodsIssueList() {
     }
   };
 
+  // ===== APPROVE =====
   const approveGI = async (id: string) => {
     try {
       await salesApi.approveGI(id);
+
+      // update UI ngay
+      setList((prev) =>
+        prev.map((x) =>
+          x.id === id
+            ? {
+                ...x,
+                status: GIStatus.Approved,
+              }
+            : x
+        )
+      );
+
       message.success("Duyệt GI thành công");
-      fetchGIs();
+
+      // sync backend
+      setTimeout(() => {
+        fetchGIs();
+      }, 500);
     } catch (err: any) {
-      message.error(err?.response?.data?.message || "Approve thất bại");
+      message.error(
+        err?.response?.data?.message ||
+          "Approve thất bại"
+      );
     }
   };
 
+  // ===== UPDATE STATUS =====
+  const updateStatus = async (
+    id: string,
+    status: number
+  ) => {
+    try {
+      await salesApi.updateGIStatus(id, status);
+
+      // update UI ngay
+      setList((prev) =>
+        prev.map((x) =>
+          x.id === id
+            ? {
+                ...x,
+                status,
+              }
+            : x
+        )
+      );
+
+      message.success("Cập nhật trạng thái thành công");
+
+      setTimeout(() => {
+        fetchGIs();
+      }, 300);
+    } catch (err: any) {
+      message.error(
+        err?.response?.data?.message ||
+          "Cập nhật trạng thái thất bại"
+      );
+    }
+  };
+
+  // ===== OPEN DETAIL =====
   const openDetailModal = (gi: any) => {
     setSelectedGIId(gi.id);
     setOpenDetail(true);
   };
 
-  const baseColumns = [
-    { title: "Mã GI", dataIndex: "code" },
+  // ===== TABLE COLUMNS =====
+  const columns = [
+    {
+      title: "Mã GI",
+      dataIndex: "code",
+    },
+
     {
       title: "Trạng thái",
       dataIndex: "status",
       render: (s: number) => {
         const info = StatusMap[s];
-        return <Tag color={info?.color}>{info?.label || "Không xác định"}</Tag>;
+
+        return (
+          <Tag color={info?.color}>
+            {info?.label || "Không xác định"}
+          </Tag>
+        );
       },
     },
+
     {
       title: "Ngày xuất",
       dataIndex: "issuedAt",
       render: (d: string | null) =>
-        d ? new Date(d).toLocaleString("vi-VN") : "-",
+        d
+          ? new Date(d).toLocaleString("vi-VN")
+          : "-",
     },
-  ];
 
-  const saleColumns = [
-    ...baseColumns,
-    {
-      title: "Đơn bán",
-      render: (_: any, r: any) =>
-        r.salesOrderCode || `SO-${r.salesOrderId?.slice(0, 8) || ""}...`,
-    },
-    {
-      title: "Hành động",
-      render: (_: any, r: any) => (
-        <Button size="small" onClick={() => openDetailModal(r)}>
-          Chi tiết
-        </Button>
-      ),
-    },
-  ];
-
-  const productionColumns = [
-    ...baseColumns,
     {
       title: "Hành động",
       render: (_: any, r: any) => {
         switch (r.status) {
+          // ===== PENDING =====
           case GIStatus.Pending:
             return (
-              <Popconfirm
-                title={`Duyệt GI ${r.code}?`}
-                onConfirm={() => approveGI(r.id)}
-                okText="Duyệt"
-                cancelText="Hủy"
-              >
-                <Button type="primary" size="small">
-                  Duyệt
+              <Space wrap>
+                <Popconfirm
+                  title={`Duyệt GI ${r.code}?`}
+                  onConfirm={() => approveGI(r.id)}
+                  okText="Duyệt"
+                  cancelText="Hủy"
+                >
+                  <Button
+                    type="primary"
+                    size="small"
+                  >
+                    Duyệt
+                  </Button>
+                </Popconfirm>
+
+                <Button
+                  danger
+                  size="small"
+                  onClick={() =>
+                    updateStatus(
+                      r.id,
+                      GIStatus.OutOfStock
+                    )
+                  }
+                >
+                  Hết hàng
                 </Button>
-              </Popconfirm>
+
+                <Button
+                  size="small"
+                  onClick={() =>
+                    updateStatus(
+                      r.id,
+                      GIStatus.InsufficientStock
+                    )
+                  }
+                >
+                  Không đủ hàng
+                </Button>
+              </Space>
             );
 
+          // ===== PICKING =====
           case GIStatus.Approved:
           case GIStatus.Partial:
           case GIStatus.Picking:
@@ -148,17 +234,58 @@ export default function GoodsIssueList() {
               <Button
                 type="primary"
                 size="small"
-                onClick={() => openDetailModal(r)}
+                onClick={() =>
+                  openDetailModal(r)
+                }
               >
                 Picking / Xuất
               </Button>
             );
 
+          // ===== COMPLETE =====
           case GIStatus.Completed:
-            return <Tag color="green">Hoàn thành</Tag>;
+            return (
+              <Tag color="green">
+                Hoàn thành
+              </Tag>
+            );
 
+          // ===== OUT OF STOCK =====
+          case GIStatus.OutOfStock:
+            return (
+              <Tag color="volcano">
+                Hết hàng
+              </Tag>
+            );
+
+          // ===== INSUFFICIENT =====
+          case GIStatus.InsufficientStock:
+            return (
+              <Tag color="gold">
+                Không đủ hàng
+              </Tag>
+            );
+
+          // ===== REJECT =====
+          case GIStatus.Rejected:
+            return (
+              <Tag color="red">
+                Đã từ chối
+              </Tag>
+            );
+
+          // ===== DEFAULT =====
           default:
-            return <Button size="small">Xem</Button>;
+            return (
+              <Button
+                size="small"
+                onClick={() =>
+                  openDetailModal(r)
+                }
+              >
+                Xem
+              </Button>
+            );
         }
       },
     },
@@ -166,31 +293,28 @@ export default function GoodsIssueList() {
 
   return (
     <div>
-      <Tabs
-        activeKey={activeTab}
-        onChange={(k) => setActiveTab(k as TabKey)}
-        items={[
-          { key: "sale", label: "Xuất bán" },
-          { key: "production", label: "Xuất sản xuất" },
-        ]}
-      />
+      {/* ===== ACTIONS ===== */}
+      <Space style={{ marginBottom: 16 }}>
+        <Button
+          type="primary"
+          onClick={() => setOpenCreate(true)}
+        >
+          Tạo GI sản xuất
+        </Button>
+      </Space>
 
-      {activeTab === "production" && (
-        <Space style={{ marginBottom: 16 }}>
-          <Button type="primary" onClick={() => setOpenCreate(true)}>
-            Tạo GI sản xuất
-          </Button>
-        </Space>
-      )}
-
+      {/* ===== TABLE ===== */}
       <Table
         rowKey="id"
         loading={loading}
         dataSource={list}
-        columns={activeTab === "sale" ? saleColumns : productionColumns}
-        pagination={{ pageSize: 10 }}
+        columns={columns}
+        pagination={{
+          pageSize: 10,
+        }}
       />
 
+      {/* ===== DETAIL ===== */}
       {selectedGIId && (
         <GoodsIssueDetailModal
           open={openDetail}
@@ -200,6 +324,7 @@ export default function GoodsIssueList() {
         />
       )}
 
+      {/* ===== CREATE ===== */}
       <CreateProductionGIModal
         open={openCreate}
         onCancel={() => setOpenCreate(false)}

@@ -1,8 +1,19 @@
 import {
-  Modal, Form, InputNumber, Button, Space, message, Select, Row, Col, Divider
+  Modal,
+  Form,
+  InputNumber,
+  Button,
+  Space,
+  message,
+  Select,
+  Row,
+  Col,
+  Divider,
 } from "antd";
+
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
+
 import { purchaseApi } from "../../api/purchase.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { productApi } from "../../api/product.api";
@@ -13,56 +24,82 @@ interface Props {
   onSuccess: () => void;
 }
 
-export default function CreateProductionGRModal({ open, onCancel, onSuccess }: Props) {
+export default function CreateProductionGRModal({
+  open,
+  onCancel,
+  onSuccess,
+}: Props) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
 
+  // ================= LOAD DATA =================
   useEffect(() => {
-    if (open) {
-      const fetchData = async () => {
-        try {
-          const [whRes, prodRes] = await Promise.all([
-            warehouseApi.getByWarehouseType({ warehousetype: 1 }),
-            productApi.getAllByType(1)
-          ]);
-          setWarehouses(whRes.data.result || []);
-          setProducts(prodRes.data || []);
-        } catch {
-          message.error("Không thể tải dữ liệu danh mục");
-        }
-      };
-      fetchData();
-    } else {
+    if (!open) {
       form.resetFields();
+      return;
     }
+
+    const fetchData = async () => {
+      try {
+        const [whRes, prodRes] = await Promise.all([
+          // ✅ GET ALL WAREHOUSES (FIX HERE)
+          warehouseApi.query(1, 1000),
+
+          // PRODUCTS
+          productApi.getAll(),
+        ]);
+
+        setWarehouses(whRes.data.items || []);
+        setProducts(prodRes.data || []);
+      } catch {
+        message.error("Không thể tải dữ liệu danh mục");
+      }
+    };
+
+    fetchData();
   }, [open, form]);
 
+  // ================= SUBMIT =================
   const onSubmit = async () => {
     try {
       const values = await form.validateFields();
+
+      if (!values.items || values.items.length === 0) {
+        message.warning("Vui lòng thêm sản phẩm");
+        return;
+      }
+
       setLoading(true);
 
       const payload = {
         warehouseId: values.warehouseId,
-        code: "",  // sinh tự động ở backend
+        code: "",
         receiptType: 1,
         productionReceiptItems: values.items.map((i: any) => ({
           productId: i.productId,
           quantity: i.quantity,
-          lotCode: "",   // sinh tự động ở backend
-          status: 1
+          lotCode: "",
+          status: 1,
         })),
       };
 
       await purchaseApi.createGR(payload);
-      message.success("Tạo GR sản xuất thành công. Bây giờ bạn có thể Duyệt phiếu này.");
+
+      message.success("Tạo đơn nhập thành công");
+
+      form.resetFields();
       onSuccess();
     } catch (error: any) {
       const apiErrors = error.response?.data?.errors;
+
       if (apiErrors) {
-        message.error("Lỗi dữ liệu: " + Object.values(apiErrors).flat().join(", "));
+        message.error(
+          "Lỗi dữ liệu: " +
+            Object.values(apiErrors).flat().join(", ")
+        );
       } else {
         message.error(error.response?.data?.message || "Thất bại");
       }
@@ -71,31 +108,52 @@ export default function CreateProductionGRModal({ open, onCancel, onSuccess }: P
     }
   };
 
+  // ================= RENDER =================
   return (
     <Modal
       open={open}
-      title="Tạo Phiếu Nhập Sản Xuất"
+      title="Tạo Đơn Nhập Sản Xuất"
       onCancel={onCancel}
-      width={700}
+      width={750}
       footer={null}
       destroyOnClose
     >
       <Form form={form} layout="vertical">
-        <Form.Item name="warehouseId" label="Kho nhận" rules={[{ required: true }]}>
+
+        {/* ================= WAREHOUSE ================= */}
+        <Form.Item
+          name="warehouseId"
+          label="Kho nhận"
+          rules={[
+            {
+              required: true,
+              message: "Chọn kho",
+            },
+          ]}
+        >
           <Select placeholder="Chọn kho">
-            {warehouses.map(w => (
-              <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
+            {warehouses.map((w) => (
+              <Select.Option key={w.id} value={w.id}>
+                {w.name}
+              </Select.Option>
             ))}
           </Select>
         </Form.Item>
 
         <Divider>Chi tiết sản phẩm</Divider>
 
+        {/* ================= ITEMS ================= */}
         <Form.List name="items" initialValue={[{}]}>
           {(fields, { add, remove }) => (
             <>
               {fields.map(({ key, name, ...restField }) => (
-                <Row key={key} gutter={8} align="bottom" style={{ marginBottom: 12 }}>
+                <Row
+                  key={key}
+                  gutter={8}
+                  align="bottom"
+                  style={{ marginBottom: 12 }}
+                >
+                  {/* PRODUCT */}
                   <Col span={14}>
                     <Form.Item
                       {...restField}
@@ -103,25 +161,49 @@ export default function CreateProductionGRModal({ open, onCancel, onSuccess }: P
                       label="Sản phẩm"
                       rules={[{ required: true }]}
                     >
-                      <Select showSearch optionFilterProp="label">
-                        {products.map(p => (
-                          <Select.Option key={p.id} value={p.id} label={p.name}>
+                      <Select
+                        showSearch
+                        optionFilterProp="children"
+                        placeholder="Chọn sản phẩm"
+                        filterOption={(input, option) =>
+                          (option?.children as unknown as string)
+                            ?.toLowerCase()
+                            .includes(input.toLowerCase())
+                        }
+                      >
+                        {products.map((p) => (
+                          <Select.Option key={p.id} value={p.id}>
                             {p.name}
                           </Select.Option>
                         ))}
                       </Select>
                     </Form.Item>
                   </Col>
+
+                  {/* QUANTITY */}
                   <Col span={8}>
                     <Form.Item
                       {...restField}
                       name={[name, "quantity"]}
                       label="Số lượng"
-                      rules={[{ required: true }]}
+                      rules={[
+                        { required: true },
+                        {
+                          type: "number",
+                          min: 1,
+                          message: "Phải lớn hơn 0",
+                        },
+                      ]}
                     >
-                      <InputNumber min={1} style={{ width: '100%' }} />
+                      <InputNumber
+                        min={1}
+                        precision={0}
+                        style={{ width: "100%" }}
+                      />
                     </Form.Item>
                   </Col>
+
+                  {/* REMOVE */}
                   <Col span={2}>
                     <Button
                       type="text"
@@ -133,17 +215,32 @@ export default function CreateProductionGRModal({ open, onCancel, onSuccess }: P
                   </Col>
                 </Row>
               ))}
-              <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+
+              {/* ADD ROW */}
+              <Button
+                type="dashed"
+                onClick={() => add()}
+                block
+                icon={<PlusOutlined />}
+              >
                 Thêm dòng
               </Button>
             </>
           )}
         </Form.List>
 
-        <div style={{ textAlign: 'right', marginTop: 24 }}>
+        {/* ================= ACTION ================= */}
+        <div style={{ textAlign: "right", marginTop: 24 }}>
           <Space>
             <Button onClick={onCancel}>Hủy</Button>
-            <Button type="primary" loading={loading} onClick={onSubmit}>Tạo phiếu</Button>
+
+            <Button
+              type="primary"
+              loading={loading}
+              onClick={onSubmit}
+            >
+              Tạo phiếu
+            </Button>
           </Space>
         </div>
       </Form>

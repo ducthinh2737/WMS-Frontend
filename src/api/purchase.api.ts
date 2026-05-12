@@ -29,7 +29,8 @@ export const purchaseApi = {
   getGRsByType: (params: GRByTypeParams) => http.get<GoodsReceiptDto[]>(`${baseUrl}/grbytype`, { params }),
   cancelGR:(id: string) => http.delete(`${baseUrl}/gr/${id}`),
   createGR:(payload: ProductionGRCreateRequest) => http.post<GoodsReceiptDto>(`${baseUrl}/gr`, payload),
-
+updateGRStatus: (grId: string, status: number) =>
+  http.patch(`${baseUrl}/gr/${grId}/status`, { status }),
   // ── Receive ──────────────────────────────────────────────────────
   ReceiveItem: (payload: ReceiveItemRequest) => http.post(`${baseUrl}/receive-item`, payload),
 

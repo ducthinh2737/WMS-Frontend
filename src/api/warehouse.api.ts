@@ -74,6 +74,8 @@ export const warehouseApi = {
       "/Warehouses/warehousebytype",
       dto
     ),
+  getAll: () =>
+    http.get<{ items: WarehouseDto[] }>("/getall"),
 
   // =======================
   // Update

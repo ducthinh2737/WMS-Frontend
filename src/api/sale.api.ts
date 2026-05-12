@@ -12,6 +12,10 @@ export const salesApi = {
   // CREATE
   create: (payload: any) => http.post("/salesorder", payload),
 
+  updateGIStatus: (id: string, status: number) =>
+  http.put(`/salesorder/goods-issue/${id}/status`, {
+    status,
+  }),
   // APPROVE
   approve: (id: string) => http.post(`/salesorder/${id}/approve`),
 
