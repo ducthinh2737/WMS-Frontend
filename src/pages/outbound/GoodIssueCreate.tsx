@@ -12,7 +12,7 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { salesApi } from "../../api/sale.api";
+import { outboundApi } from "../../api/outbound.api";
 import { goodsIssueApi } from "../../api/goodissue.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { locationApi } from "../../api/location.api";
@@ -44,7 +44,7 @@ export default function GoodsIssueCreate() {
 
   const loadSO = async () => {
     try {
-      const res = await salesApi.get(soId!);
+      const res = await outboundApi.get(soId!);
       setItems(res.data.items || []);
     } catch {
       message.error("Lỗi tải thông tin đơn bán hàng");
@@ -104,7 +104,7 @@ export default function GoodsIssueCreate() {
     try {
       setLoading(true);
       const payload = {
-        salesOrderId: soId,
+        outboundOrderId: soId,
         warehouseId: values.warehouseId,
         items: items.map((i) => ({
           productId: i.productId,
@@ -220,3 +220,4 @@ export default function GoodsIssueCreate() {
     </Card>
   );
 }
+

@@ -7,7 +7,7 @@ import {
   message,
 } from "antd";
 import { useEffect, useState } from "react";
-import { salesApi } from "../../api/sale.api";
+import { outboundApi } from "../../api/outbound.api";
 import GoodsIssueDetailModal from "./GoodsIssueDetailModal";
 import CreateProductionGIModal from "./CreateProductionGIModal";
 
@@ -61,8 +61,8 @@ export default function GoodsIssueList() {
     setLoading(true);
 
     try {
-      const res = await salesApi.queryGI({
-        type: GIType.Production,
+      const res = await outboundApi.queryGoodsIssues({
+        status: undefined, // Or pass relevant status
       });
 
       const filtered = (res.data || []).filter(
@@ -80,7 +80,7 @@ export default function GoodsIssueList() {
   // ===== APPROVE =====
   const approveGI = async (id: string) => {
     try {
-      await salesApi.approveGI(id);
+      await outboundApi.approveGI(id);
 
       // update UI ngay
       setList((prev) =>
@@ -114,7 +114,7 @@ export default function GoodsIssueList() {
     status: number
   ) => {
     try {
-      await salesApi.updateGIStatus(id, status);
+      await outboundApi.updateGIStatus(id, status);
 
       // update UI ngay
       setList((prev) =>

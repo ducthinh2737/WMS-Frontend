@@ -1,7 +1,7 @@
 import { Table, Button, Tag, Space, message } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { salesApi } from "../../api/sale.api";
+import { outboundApi } from "../../api/outbound.api";
 import SaleOrderCreateModal from "./SaleOrderCreateModal";
 import SalesOrderDetailModal from "./SaleOrderDetail";
 
@@ -24,7 +24,7 @@ export interface GoodsIssueDto {
   createAt?: string; // hoặc IssuedAt nếu có
 }
 
-export interface SalesOrderDto {
+export interface OutboundOrderDto {
   id: string;
   code: string;
   customerId: number;
@@ -47,7 +47,7 @@ const statusMap: Record<number, { label: string; color: string }> = {
 };
 
 export default function SalesOrderList() {
-  const [data, setData] = useState<SalesOrderDto[]>([]);
+  const [data, setData] = useState<OutboundOrderDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedSoId, setSelectedSoId] = useState<string | null>(null);
   const [openCreate, setOpenCreate] = useState(false);
@@ -60,7 +60,7 @@ export default function SalesOrderList() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await salesApi.query();
+      const res = await outboundApi.getOrders();
       setData(res.data || []);
     } catch (err) {
       message.error("Không thể tải danh sách đơn hàng");
@@ -76,7 +76,7 @@ export default function SalesOrderList() {
 
   const approve = async (id: string) => {
     try {
-      await salesApi.approve(id);
+      await outboundApi.approveOrder(id);
       message.success("Đơn hàng đã được phê duyệt và tự động tạo phiếu xuất kho");
       refreshList();
     } catch (err: any) {
@@ -86,7 +86,7 @@ export default function SalesOrderList() {
 
   const reject = async (id: string) => {
     try {
-      await salesApi.reject(id);
+      await outboundApi.rejectOrder(id);
       message.success("Đơn hàng đã bị từ chối");
       refreshList();
     } catch {
@@ -105,14 +105,14 @@ export default function SalesOrderList() {
     },
     {
       title: "Khách hàng",
-      render: (_: any, record: SalesOrderDto) =>
+      render: (_: any, record: OutboundOrderDto) =>
         record.customerName || `KH ${record.customerId}`,
     },
     {
       title: "Tổng tiền",
       width: 140,
       align: "right" as const,
-      render: (_: any, record: SalesOrderDto) =>
+      render: (_: any, record: OutboundOrderDto) =>
         calcTotalAmount(record.items).toLocaleString("vi-VN", {
           style: "currency",
           currency: "VND",
@@ -137,7 +137,7 @@ export default function SalesOrderList() {
       title: "Thao tác",
       width: 220,
       align: "center" as const,
-      render: (_: any, record: SalesOrderDto) => {
+      render: (_: any, record: OutboundOrderDto) => {
         const status = record.status;
         const hasGoodsIssues = record.goodsIssues?.length > 0;
 

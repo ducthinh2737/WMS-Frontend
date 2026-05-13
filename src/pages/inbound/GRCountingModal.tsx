@@ -11,14 +11,14 @@ import {
 } from "antd";
 import { useState } from "react";
 import dayjs from "dayjs";
-import { purchaseApi } from "../../api/purchase.api";
+import { inboundApi } from "../../api/inbound.api";
 import LocationCreateModal from "../location/LocationCreate";
 
 import type {
   GoodsReceiptDto,
   GoodsReceiptItemDto,
   ReceiveItemRequest,
-} from "../../types/purchase";
+} from "../../types/inbound";
 
 const { Text } = Typography;
 
@@ -91,7 +91,7 @@ export default function GRCountingModal({
         manufacturingDate: lot?.manufacturingDate,
       };
 
-      await purchaseApi.ReceiveItem(payload);
+      await inboundApi.ReceiveItem(payload);
     }
   };
 

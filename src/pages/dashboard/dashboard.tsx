@@ -50,9 +50,9 @@ import {
 } from "recharts";
 import { inventoryApi } from "../../api/inventory.api";
 import { warehouseApi } from "../../api/warehouse.api";
-import { salesApi } from "../../api/sale.api";
+import { outboundApi } from "../../api/outbound.api";
 import { productApi } from "../../api/product.api";
-import { purchaseApi } from "../../api/purchase.api";
+import { inboundApi } from "../../api/inbound.api";
 import type { WarehouseDto, WarehouseType } from "../../types/warehouse";
 import type { InventoryDto } from "../../types/inventory";
 
@@ -179,7 +179,7 @@ function StatCard({ title, value, prefix, suffix, loading, color, trend, subValu
         border: "1px solid #f0f0f0",
         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
       }}
-      bodyStyle={{ padding: "20px 24px" }}
+      styles={{ body: { padding: "20px 24px" } }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}>
@@ -282,7 +282,7 @@ function WarehouseTypeTab({ group, loading }: WarehouseTypeTabProps) {
             <Statistic
               title={<span style={{ fontSize: 12 }}>Tổng tồn kho</span>}
               value={group.totalQty}
-              valueStyle={{ color: group.color, fontSize: 20, fontWeight: 700 }}
+              styles={{ content: { color: group.color, fontSize: 20, fontWeight: 700 } }}
             />
           </Card>
         </Col>
@@ -294,7 +294,7 @@ function WarehouseTypeTab({ group, loading }: WarehouseTypeTabProps) {
             <Statistic
               title={<span style={{ fontSize: 12 }}>Khả dụng</span>}
               value={group.availableQty}
-              valueStyle={{ color: "#52c41a", fontSize: 20, fontWeight: 700 }}
+              styles={{ content: { color: "#52c41a", fontSize: 20, fontWeight: 700 } }}
             />
           </Card>
         </Col>
@@ -306,7 +306,7 @@ function WarehouseTypeTab({ group, loading }: WarehouseTypeTabProps) {
             <Statistic
               title={<span style={{ fontSize: 12 }}>Đang khóa</span>}
               value={group.lockedQty}
-              valueStyle={{ color: "#fa8c16", fontSize: 20, fontWeight: 700 }}
+              styles={{ content: { color: "#fa8c16", fontSize: 20, fontWeight: 700 } }}
             />
           </Card>
         </Col>
@@ -441,7 +441,7 @@ function InventorySlideshow({ items, loading }: { items: InventorySlideItem[]; l
         height: "100%",
         overflow: "hidden",
       }}
-      bodyStyle={{ padding: "16px 20px" }}
+      styles={{ body: { padding: "16px 20px" } }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -572,7 +572,7 @@ export default function Dashboard() {
       const totalProducts = productArr.length;
 
       // 4. Sales Orders
-      const salesRes = await salesApi.query({ page: 1, pageSize: 10, sortBy: "createdAt", asc: false });
+      const salesRes = await outboundApi.getOrders({ page: 1, pageSize: 10, sortBy: "createdAt", asc: false });
       const { items: orders } = extractPaged(salesRes);
       const pendingOrders = orders.filter((o: any) => ["Pending", "Processing", "0", 0].includes(o.status)).length;
       const totalSalesAmount = orders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
@@ -581,7 +581,7 @@ export default function Dashboard() {
       let recentPOList: any[] = [];
       let pendingPOs = 0;
       try {
-        const poRes = await purchaseApi.getPOs({ page: 1, pageSize: 10 });
+        const poRes = await inboundApi.getOrders({ page: 1, pageSize: 10 });
         recentPOList = extractArray(poRes);
         pendingPOs = recentPOList.filter((p: any) => ["Pending", "0", 0].includes(p.status)).length;
       } catch (e) { console.warn("[Dashboard] PO fetch failed:", e); }
@@ -590,7 +590,7 @@ export default function Dashboard() {
       let recentGRList: any[] = [];
       let pendingGRs = 0;
       try {
-        const grRes = await purchaseApi.getGRs({ page: 1, pageSize: 10 });
+        const grRes = await inboundApi.getGRs({ page: 1, pageSize: 10 });
         recentGRList = extractArray(grRes);
         pendingGRs = recentGRList.filter((g: any) => [0, "0", "Pending"].includes(g.status)).length;
       } catch (e) { console.warn("[Dashboard] GR fetch failed:", e); }
@@ -800,28 +800,23 @@ export default function Dashboard() {
                   {warehouseTypeGroups.reduce((s, g) => s + g.warehouses.length, 0)} kho tổng
                 </Text>
               }
-            >
-              {warehouseTypeGroups.map((group) => {
+              items={warehouseTypeGroups.map((group) => {
                 const cfg = WAREHOUSE_TYPE_CONFIG[group.type];
-                return (
-                  // FIX: key phải là string, dùng String(group.type) → "0","1","2","3"
-                  <TabPane
-                    key={String(group.type)}
-                    tab={
-                      <span>
-                        <span style={{ color: group.color, marginRight: 4 }}>{group.icon}</span>
-                        {cfg.label}
-                        {group.warehouses.length > 0 && (
-                          <Badge count={group.warehouses.length} style={{ marginLeft: 6, backgroundColor: group.color, fontSize: 10 }} />
-                        )}
-                      </span>
-                    }
-                  >
-                    <WarehouseTypeTab group={group} loading={loading} />
-                  </TabPane>
-                );
+                return {
+                  key: String(group.type),
+                  label: (
+                    <span>
+                      <span style={{ color: group.color, marginRight: 4 }}>{group.icon}</span>
+                      {cfg.label}
+                      {group.warehouses.length > 0 && (
+                        <Badge count={group.warehouses.length} style={{ marginLeft: 6, backgroundColor: group.color, fontSize: 10 }} />
+                      )}
+                    </span>
+                  ),
+                  children: <WarehouseTypeTab group={group} loading={loading} />,
+                };
               })}
-            </Tabs>
+            />
           </Card>
         </Col>
 

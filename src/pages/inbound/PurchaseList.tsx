@@ -5,9 +5,9 @@
 
 import { Table, Button, Select, message, Spin, Space, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
-import { purchaseApi } from "../../api/purchase.api";
+import { inboundApi } from "../../api/inbound.api";
 import { supplierApi } from "../../api/supplier.api";
-import type { PurchaseOrderDto } from "../../types/purchase";
+import type { InboundOrderDto } from "../../types/inbound";
 import type { SupplierDto } from "../../types/supplier";
 import PurchaseCreateModal from "./PurchaseForm";
 import { CheckOutlined, CloseOutlined, PlusOutlined, ScanOutlined } from "@ant-design/icons"; // 🆕 ScanOutlined
@@ -25,11 +25,11 @@ const StatusColors: Record<string, string> = {
 };
 
 export default function PurchaseList() {
-  const [poList, setPoList] = useState<PurchaseOrderDto[]>([]);
+  const [poList, setPoList] = useState<InboundOrderDto[]>([]);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [selectedPO, setSelectedPO] = useState<PurchaseOrderDto | undefined>();
+  const [selectedPO, setSelectedPO] = useState<InboundOrderDto | undefined>();
 
   // 🆕 Scan modal state
   const [scanModalOpen, setScanModalOpen] = useState(false);
@@ -53,7 +53,7 @@ export default function PurchaseList() {
   const fetchPOs = async () => {
     setLoading(true);
     try {
-      const res = await purchaseApi.getPOs({ status: statusFilter });
+      const res = await inboundApi.getOrders({ status: statusFilter });
       setPoList(res.data);
     } catch {
       message.error("Không thể tải danh sách đơn mua hàng");
@@ -73,7 +73,7 @@ export default function PurchaseList() {
 
   const handleApprove = async (id: string) => {
     try {
-      await purchaseApi.approvePO(id);
+      await inboundApi.approveOrder(id);
       message.success("Đã phê duyệt đơn hàng");
       fetchPOs();
     } catch {
@@ -83,7 +83,7 @@ export default function PurchaseList() {
 
   const handleReject = async (id: string) => {
     try {
-      await purchaseApi.rejectPO(id);
+      await inboundApi.rejectOrder(id);
       message.success("Đã từ chối đơn hàng");
       fetchPOs();
     } catch {
@@ -128,7 +128,7 @@ export default function PurchaseList() {
       title: "Thao tác",
       key: "action",
       width: 280,
-      render: (_: any, record: PurchaseOrderDto) => (
+      render: (_: any, record: InboundOrderDto) => (
         <Space split={<span style={{ color: "#ccc" }}>|</span>}>
           <Button
             type="link"

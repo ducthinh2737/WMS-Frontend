@@ -10,7 +10,7 @@ import {
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 
-import { purchaseApi } from "../../api/purchase.api";
+import { inboundApi } from "../../api/inbound.api";
 import { productApi } from "../../api/product.api";
 import { supplierApi } from "../../api/supplier.api";
 import { warehouseApi } from "../../api/warehouse.api";
@@ -122,7 +122,7 @@ export default function PurchaseCreateModal({
       setLoading(true);
 
       // Không gửi code — backend tự sinh
-      await purchaseApi.createPOs({
+      await inboundApi.createOrder({
         supplierId: values.supplierId,
         code: "",
         items: values.items.map((i: any) => ({

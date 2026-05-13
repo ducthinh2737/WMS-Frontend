@@ -8,7 +8,7 @@ import {
   message,
 } from "antd";
 import { useEffect, useState } from "react";
-import { salesApi } from "../../api/sale.api";
+import { outboundApi } from "../../api/outbound.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { productApi } from "../../api/product.api";
 
@@ -52,7 +52,7 @@ export default function CreateProductionGIModal({
       const values = await form.validateFields();
       setLoading(true);
 
-      await salesApi.createProductionGI({
+      await outboundApi.createProductionGI({
         warehouseId: values.warehouseId,
         items: values.items.map((i: any) => ({
           productId: i.productId,

@@ -14,7 +14,7 @@ import {
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 
-import { purchaseApi } from "../../api/purchase.api";
+import { inboundApi } from "../../api/inbound.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { productApi } from "../../api/product.api";
 
@@ -86,7 +86,7 @@ export default function CreateProductionGRModal({
         })),
       };
 
-      await purchaseApi.createGR(payload);
+      await inboundApi.createGR(payload);
 
       message.success("Tạo đơn nhập thành công");
 

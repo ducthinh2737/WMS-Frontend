@@ -1,11 +1,11 @@
 import { Modal, Table, Tag, Descriptions } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { PurchaseOrderDto } from "../../types/purchase";
+import type { InboundOrderDto } from "../../types/inbound";
 
 interface Props {
   open: boolean;
   onCancel: () => void;
-  po?: PurchaseOrderDto;
+  po?: InboundOrderDto;
 }
 
 // 1. Config cho trạng thái PO (Dùng String)
@@ -37,7 +37,7 @@ export default function PurchaseDetailModal({ open, onCancel, po }: Props) {
     color: "default" 
   };
 
-  const columns: ColumnsType<PurchaseOrderDto["items"][number]> = [
+  const columns: ColumnsType<InboundOrderDto["items"][number]> = [
     {
       title: "Mã sản phẩm",
       dataIndex: "productId",

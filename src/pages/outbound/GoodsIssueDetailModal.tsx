@@ -20,14 +20,14 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { salesApi } from "../../api/sale.api";
+import { outboundApi } from "../../api/outbound.api";
 import type {
   GoodsIssueDetailDto,
   GoodsIssueItemDtoForFrontend,
   GoodsIssueAllocateDto,
   IssueRequestDto,
   PickingRequestDto,
-} from "../../types/sale";
+} from "../../types/outbound";
 
 /* ================= ENUM MAP ================= */
 const giaStatusMap: Record<number, { label: string; color: string }> = {
@@ -68,7 +68,7 @@ export default function GoodsIssueDetailModal({
   const loadDetail = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await salesApi.getGoodsIssueDetail(goodsIssueId);
+      const res = await outboundApi.getGoodsIssue(goodsIssueId);
       setDetail(res.data);
       setTempPicked({});
       setHasShippingError(false);
@@ -145,7 +145,7 @@ export default function GoodsIssueDetailModal({
 
     try {
       setActionLoading((p) => ({ ...p, [item.id]: true }));
-      await salesApi.picking({
+      await outboundApi.picking({
         id: item.id,
         goodsIssueId: detail.id,
         productId: Number(item.productId),
@@ -215,7 +215,7 @@ export default function GoodsIssueDetailModal({
           return;
         }
         try {
-          await salesApi.issue({
+          await outboundApi.issue({
             goodsIssueItemId: item.id,
             issuedQty: issueQty,
           });

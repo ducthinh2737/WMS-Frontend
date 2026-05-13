@@ -11,7 +11,7 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { salesApi } from "../../api/sale.api";
+import { outboundApi } from "../../api/outbound.api";
 
 // Định nghĩa DTO THỰC TẾ từ backend
 interface SalesOrderItemDto {
@@ -75,7 +75,7 @@ export default function SalesOrderDetailModal({
     if (!soId) return;
     try {
       setLoading(true);
-      const res = await salesApi.get(soId);
+      const res = await outboundApi.getOrder(soId);
       setData(res.data);
     } catch (err) {
       message.error("Không thể tải thông tin đơn hàng");
@@ -94,7 +94,7 @@ export default function SalesOrderDetailModal({
   const handleApprove = async () => {
     if (!data) return;
     try {
-      await salesApi.approve(data.id);
+      await outboundApi.approveOrder(data.id);
       message.success("Đơn hàng đã được phê duyệt");
       fetchData();
       onSuccess?.();
@@ -106,7 +106,7 @@ export default function SalesOrderDetailModal({
   const handleReject = async () => {
     if (!data) return;
     try {
-      await salesApi.reject(data.id);
+      await outboundApi.rejectOrder(data.id);
       message.success("Đơn hàng đã bị từ chối");
       fetchData();
       onSuccess?.();
@@ -117,7 +117,7 @@ export default function SalesOrderDetailModal({
 
   const handleCreateGoodsIssue = () => {
     if (!data) return;
-    navigate(`/sales/goods-issue/create?soId=${data.id}`);
+    navigate(`/outbound/issue/create?soId=${data.id}`);
     onCancel();
   };
 
@@ -272,7 +272,7 @@ export default function SalesOrderDetailModal({
                         type="link"
                         onClick={() => {
                           onCancel();
-                          navigate(`/sales/goods-issue/${record.id}`);
+                          navigate(`/outbound/issue/${record.id}`);
                         }}
                       >
                         Xem

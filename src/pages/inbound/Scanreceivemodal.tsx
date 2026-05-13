@@ -14,12 +14,12 @@ import {
 } from "@ant-design/icons";
 import { useState, useEffect, useRef, useCallback } from "react";
 import dayjs from "dayjs";
-import { purchaseApi } from "../../api/purchase.api";
+import { inboundApi } from "../../api/inbound.api";
 import type {
   GoodsReceiptDto,
   GoodsReceiptItemDto,
   ReceiveItemRequest,
-} from "../../types/purchase";
+} from "../../types/inbound";
 import LocationCreateModal from "../location/LocationCreate";
 // @ts-ignore
 import { Html5Qrcode } from "html5-qrcode";
@@ -27,11 +27,11 @@ import { Html5Qrcode } from "html5-qrcode";
 const { Text } = Typography;
 
 // ── QR Payload ────────────────────────────────────────────────────
-// Khớp với createPOs request: supplierId + items[]{productId, warehouseId, quantity, price}
+// Khớp với createOrder request: supplierId + items[]{productId, warehouseId, quantity, price}
 interface QRPayload {
   supplierId: number;
   items: Array<{
-    productId: string;   // string như createPOs gửi lên
+    productId: string;   // string như createOrder gửi lên
     warehouseId: string;
     quantity: number;
     price: number;
@@ -221,7 +221,7 @@ export default function ScanReceiveModal({ open, onCancel, onSuccess }: Props) {
     try {
       setAutoProcessMsg("Đang duyệt đơn & tạo phiếu nhập kho...");
       // Gọi endpoint tạo PO + Approve + GR trong 1 call
-      const res = await purchaseApi.scanAndProcess({
+      const res = await inboundApi.scanAndProcess({
         supplierId: payload.supplierId,
         items: payload.items.map(i => ({
           ...i,
@@ -238,14 +238,14 @@ export default function ScanReceiveModal({ open, onCancel, onSuccess }: Props) {
     } finally { setAutoProcessing(false); setAutoProcessMsg(""); }
   };
 
-  const processExistingPO = async (poCode: string) => {
+  const processExistingPO = async (orderCode: string) => {
     setAutoProcessing(true);
     setAutoProcessMsg("Đang tìm & duyệt đơn hàng...");
     try {
-      const res = await purchaseApi.confirmScanReceive(poCode);
+      const res = await inboundApi.confirmScanReceive(orderCode);
       setConfirmedResult(res.data);
       resetCounting();
-      message.success(`✓ Đơn ${poCode} đã duyệt — ${res.data.goodsReceipts.length} phiếu sẵn sàng`);
+      message.success(`✓ Đơn ${orderCode} đã duyệt — ${res.data.goodsReceipts.length} phiếu sẵn sàng`);
       setStep(1);
     } catch (err: any) {
       message.error(err?.response?.data?.message || "Không tìm thấy đơn hàng");
@@ -288,7 +288,7 @@ export default function ScanReceiveModal({ open, onCancel, onSuccess }: Props) {
           expiryDate:        lotData[item.id]?.expiryDate,
           manufacturingDate: lotData[item.id]?.manufacturingDate,
         };
-        await purchaseApi.ReceiveItem(payload);
+        await inboundApi.ReceiveItem(payload);
       }
       const done = [...completedGRs, currentGR.id];
       setCompletedGRs(done);

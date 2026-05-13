@@ -1,4 +1,4 @@
-export interface PurchaseOrderDto {
+export interface InboundOrderDto {
   id: string;
   code: string;
   supplierId: number;
@@ -23,28 +23,28 @@ export interface PurchaseOrderDto {
   updatedAt?: string;
 }
 
-export interface PurchaseQueryParams {
+export interface InboundQueryParams {
   page?: number;
   pageSize?: number;
   status?: string;
   receiptType?: 0 | 1;
-  poId?: string;
+  orderId?: string;
 }
 
 export interface GRByTypeParams {
   receiptType: 0 | 1;
-  poId?: string;
+  orderId?: string;
 }
 
-export interface PurchaseItemForm {
+export interface InboundItemForm {
   productId: string;
   quantity: number;
 }
 
-export interface PurchaseOrderCreateRequest {
+export interface InboundOrderCreateRequest {
   supplierId: number;
   code: string;
-  items: PurchaseItemForm[];
+  items: InboundItemForm[];
 }
 
 export interface GoodsReceiptItemDto {
@@ -62,19 +62,19 @@ export interface GoodsReceiptDto {
   id: string;
   status: number;
   code: string;
-  purchaseOrderId?: string;
+  inboundOrderId?: string;
   warehouseId: string;
   receiptType: number;
   createdAt: string;
   updatedAt?: string;
-  purchaseOrder?: PurchaseOrderDto;
+  inboundOrder?: InboundOrderDto;
   items: GoodsReceiptItemDto[];
   productionReceiptItems?: ProductionReceiptItemDto[];
 }
 
 export interface GoodsReceiptCreateRequest {
   code: string;
-  PurchaseOrderId: string;
+  inboundOrderId: string;
   warehouseId: string;
   items: {
     productId: string;
@@ -88,7 +88,7 @@ export interface ReceiveItemRequest {
   received_Qty: number;
   lotCode: string;
   expiryDate?: string;
-  manufacturingDate?: string;  // ← đã có, giữ nguyên
+  manufacturingDate?: string;
 }
 
 export interface ProductionReceiptItemDto {
@@ -100,7 +100,7 @@ export interface ProductionReceiptItemDto {
   status: number;
   lotCode?: string;
   expiryDate?: string;
-  manufacturingDate?: string;  // ← thêm
+  manufacturingDate?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -114,6 +114,12 @@ export interface ProductionGRCreateRequest {
     quantity: number;
     lotCode?: string;
     expiryDate?: string;
-    manufacturingDate?: string;  // ← thêm
+    manufacturingDate?: string;
   }[];
+}
+
+export interface ScanReceiveResultDto {
+  inboundOrder: InboundOrderDto;
+  goodsReceipts: GoodsReceiptDto[];
+  needsApproval: boolean;
 }

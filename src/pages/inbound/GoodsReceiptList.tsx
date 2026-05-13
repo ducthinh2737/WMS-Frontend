@@ -8,8 +8,8 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 
-import { purchaseApi } from "../../api/purchase.api";
-import type { GoodsReceiptDto } from "../../types/purchase";
+import { inboundApi } from "../../api/inbound.api";
+import type { GoodsReceiptDto } from "../../types/inbound";
 
 import ProductionGRCountingModal from "./ProductionGRCountingModal";
 import CreateProductionGRModal from "./CreateProductionGRModal";
@@ -51,7 +51,7 @@ export default function GoodsReceiptList() {
   const fetchGRs = async () => {
     setLoading(true);
     try {
-      const res = await purchaseApi.getGRsByType({ receiptType: 1 });
+      const res = await inboundApi.getGRsByType({ receiptType: 1 });
       setGrList(res.data || []);
     } catch (err) {
       console.error(err);
@@ -68,7 +68,7 @@ export default function GoodsReceiptList() {
 
   const handleApproveProduction = async (record: GoodsReceiptDto) => {
     try {
-      await purchaseApi.approveProductionGR(record);
+      await inboundApi.approveProductionGR(record);
       message.success("Duyệt đơn nhập thành công");
       fetchGRs();
     } catch (err: any) {
@@ -79,7 +79,7 @@ export default function GoodsReceiptList() {
   // ← thêm hàm này, mirror updateStatus bên GoodsIssueList
   const updateGRStatus = async (id: string, status: number) => {
     try {
-      await purchaseApi.updateGRStatus(id, status);
+      await inboundApi.updateGRStatus(id, status);
 
       // cập nhật UI ngay, không chờ reload
       setGrList((prev) =>

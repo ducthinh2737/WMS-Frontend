@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
-import { salesApi } from "../../api/sale.api";
+import { outboundApi } from "../../api/outbound.api";
 import { customerApi } from "../../api/customer.api";
 import { inventoryApi } from "../../api/inventory.api";
 import { warehouseApi } from "../../api/warehouse.api";
@@ -273,7 +273,7 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
 
       setLoading(true);
 
-      await salesApi.create({
+      await outboundApi.createOrder({
         customerId: form.getFieldValue("customerId"),
         items: items.map((i) => ({
           productId: i.productId,
@@ -372,3 +372,4 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
     </Form>
   );
 }
+

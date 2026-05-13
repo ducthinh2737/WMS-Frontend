@@ -15,12 +15,12 @@ import StockTakeCounting from "../pages/stocktake/StockTakeCounting"; // ĐÃ S�
 import TransferList from "../pages/transfer/TransferList";
 import TransferCreate from "../pages/transfer/TransferCreate";
 
-// SALES
-import SaleOrderList from "../pages/sales/SaleOrderList";
-import SaleOrderDetail from "../pages/sales/SaleOrderDetail";
-import SaleOrderCreate from "../pages/sales/SaleOrderCreate";
-import GoodsIssueList from "../pages/sales/GoodIssueList";
-import GoodsIssueCreate from "../pages/sales/GoodIssueCreate";
+// OUTBOUND
+import SaleOrderList from "../pages/outbound/SaleOrderList";
+import SaleOrderDetail from "../pages/outbound/SaleOrderDetail";
+import SaleOrderCreate from "../pages/outbound/SaleOrderCreate";
+import GoodsIssueList from "../pages/outbound/GoodIssueList";
+import GoodsIssueCreate from "../pages/outbound/GoodIssueCreate";
 
 // INVENTORY
 import InventoryList from "../pages/inventory/InventoryList";
@@ -83,11 +83,11 @@ import BrandList from "../pages/brands/BrandList";
 import BrandCreate from "../pages/brands/BrandCreate";
 import BrandEdit from "../pages/brands/BrandEdit";
 
-// PURCHASE
-import PurchaseList from "../pages/purchase/PurchaseList";
-import PurchaseCreateModal from "../pages/purchase/PurchaseForm";
-import GRList from "../pages/purchase/GoodsReceiptList";
-import GRCreate from "../pages/purchase/GRCountingModal";
+// INBOUND
+import PurchaseList from "../pages/inbound/PurchaseList";
+import PurchaseCreateModal from "../pages/inbound/PurchaseForm";
+import GRList from "../pages/inbound/GoodsReceiptList";
+import GRCreate from "../pages/inbound/GRCountingModal";
 
 export default function AppRoutes() {
     return (
@@ -165,17 +165,16 @@ export default function AppRoutes() {
                 {/* <Route path="warehouse/:warehouseId?/locations/create" element={<LocationCreate />} />
                 <Route path="warehouse/:warehouseId?/locations/edit/:id" element={<LocationEdit />} /> */}
 
-                {/* PURCHASE */}
-                <Route path="purchase" element={<PurchaseList />} />
-                <Route path="goodsreceipt" element={<GRList />} />
+                {/* INBOUND */}
+                <Route path="inbound" element={<PurchaseList />} />
+                <Route path="inbound/receipt" element={<GRList />} />
                 
-                {/* SALES */}
-                <Route path="sales/orders" element={<SaleOrderList />} />
-                {/* <Route path="sales/orders/:id" element={<SaleOrderDetail />} /> */}
-                <Route path="sales/orders/create" element={<SaleOrderCreate />} />
+                {/* OUTBOUND */}
+                <Route path="outbound/orders" element={<SaleOrderList />} />
+                <Route path="outbound/orders/create" element={<SaleOrderCreate />} />
 
-                <Route path="sales/goods-issue" element={<GoodsIssueList />} />
-                <Route path="sales/goods-issue/create" element={<GoodsIssueCreate />} />
+                <Route path="outbound/issue" element={<GoodsIssueList />} />
+                <Route path="outbound/issue/create" element={<GoodsIssueCreate />} />
 
                 {/* TRANSFER */}
                 <Route path="transfer" element={<TransferList />} />

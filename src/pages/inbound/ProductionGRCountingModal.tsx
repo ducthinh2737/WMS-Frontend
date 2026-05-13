@@ -10,8 +10,8 @@ import {
   Col,
 } from "antd";
 import { useState, useEffect } from "react";
-import type { GoodsReceiptDto } from "../../types/purchase";
-import { purchaseApi } from "../../api/purchase.api";
+import type { GoodsReceiptDto } from "../../types/inbound";
+import { inboundApi } from "../../api/inbound.api";
 import dayjs from "dayjs";
 
 interface Props {
@@ -70,7 +70,7 @@ export default function ProductionGRCountingModal({
         }),
       };
 
-      await purchaseApi.countingProductionGR(payload);
+      await inboundApi.countingProductionGR(payload);
 
       message.success("Kiểm đếm thành công");
       onSuccess();
