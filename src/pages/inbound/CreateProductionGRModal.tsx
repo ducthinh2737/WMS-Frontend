@@ -108,6 +108,21 @@ export default function CreateProductionGRModal({
     }
   };
 
+  const selectedWarehouseId = Form.useWatch("warehouseId", form);
+  const selectedWarehouse = warehouses.find((w) => w.id === selectedWarehouseId);
+
+  const filteredProducts = products.filter((p) => {
+    if (!selectedWarehouse) return true; // Nếu chưa chọn kho thì hiện hết hoặc rỗng tùy ý (đây chọn hiện hết)
+
+    // Quy tắc lọc:
+    // WarehouseType: 0 (RawMaterial), 2 (Auxiliary), 3 (Chemical) -> ProductType: 0 (Material)
+    // WarehouseType: 1 (FinishedGoods) -> ProductType: 1 (Production)
+    if (selectedWarehouse.warehouseType === 1) {
+      return p.type === 1;
+    }
+    return p.type === 0;
+  });
+
   // ================= RENDER =================
   return (
     <Modal
@@ -131,7 +146,13 @@ export default function CreateProductionGRModal({
             },
           ]}
         >
-          <Select placeholder="Chọn kho">
+          <Select
+            placeholder="Chọn kho"
+            onChange={() => {
+              // Reset items when warehouse changes to avoid invalid product-warehouse combination
+              form.setFieldValue("items", [{}]);
+            }}
+          >
             {warehouses.map((w) => (
               <Select.Option key={w.id} value={w.id}>
                 {w.name}
@@ -164,14 +185,15 @@ export default function CreateProductionGRModal({
                       <Select
                         showSearch
                         optionFilterProp="children"
-                        placeholder="Chọn sản phẩm"
+                        placeholder={selectedWarehouseId ? "Chọn sản phẩm" : "Vui lòng chọn kho trước"}
+                        disabled={!selectedWarehouseId}
                         filterOption={(input, option) =>
                           (option?.children as unknown as string)
                             ?.toLowerCase()
                             .includes(input.toLowerCase())
                         }
                       >
-                        {products.map((p) => (
+                        {filteredProducts.map((p) => (
                           <Select.Option key={p.id} value={p.id}>
                             {p.name}
                           </Select.Option>
