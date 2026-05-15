@@ -1,4 +1,4 @@
-import { Button, Popconfirm, message, Tag } from "antd";
+import { Button, Popconfirm, message, Tag, Switch } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supplierApi } from "../../api/supplier.api";
@@ -16,6 +16,19 @@ export default function SupplierList() {
             setData(res.data);
         } catch {
             message.error("Failed to load suppliers");
+        }
+    };
+
+    const handleToggleActive = async (record: SupplierDto, checked: boolean) => {
+        try {
+            await supplierApi.update(record.id, {
+                ...record,
+                isActive: checked
+            });
+            message.success(`Status updated for ${record.name}`);
+            load();
+        } catch {
+            message.error("Failed to update status");
         }
     };
 
@@ -51,12 +64,17 @@ export default function SupplierList() {
                     { 
                         title: "Created At", 
                         dataIndex: "createdAt",
-                        render: (v: string) => v ? new Date(v).toLocaleString("vi-VN") : "—"
+                        render: (v: string) => v ? new Date(v).toLocaleDateString("vi-VN") : "—"
                     },
                     { 
                         title: "Active", 
                         dataIndex: "isActive",
-                        render: (v: boolean) => v ? <Tag color="green">Yes</Tag> : <Tag color="red">No</Tag>
+                        render: (v: boolean, record: SupplierDto) => (
+                            <Switch 
+                                checked={v} 
+                                onChange={(checked) => handleToggleActive(record, checked)} 
+                            />
+                        )
                     },
                     {
                         title: "Actions",

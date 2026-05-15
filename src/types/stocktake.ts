@@ -17,6 +17,8 @@ export interface StockTakeItemDto {
   productId: number;
   productName?: string;
   sku?: string;
+  lotId?: string;
+  lotCode?: string;
   systemQty: number;   // Số lượng sổ sách (snapshot)
   countedQty: number;  // Số lượng thực tế nhân viên nhập
   difference: number;  // Chênh lệch (tự tính ở BE)
@@ -36,6 +38,7 @@ export interface SubmitCountDto {
 export interface ItemCountDto {
   locationId: string;
   productId: number;
+  lotId?: string;
   countedQty: number;
   note?: string;
 }

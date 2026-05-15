@@ -19,6 +19,19 @@ export default function CategoryList() {
         }
     };
 
+    const handleToggleActive = async (record: CategoryDto, checked: boolean) => {
+        try {
+            await categoryApi.update(record.id, {
+                ...record,
+                isActive: checked
+            });
+            message.success(`Status updated for ${record.name}`);
+            load();
+        } catch {
+            message.error("Failed to update status");
+        }
+    };
+
     useEffect(() => { load(); }, []);
 
     const handleDelete = async (id: number) => {
@@ -63,13 +76,18 @@ export default function CategoryList() {
     { 
         title: "Active", 
         dataIndex: "isActive", 
-        render: (v: boolean) => <Switch checked={v} disabled /> 
+        render: (v: boolean, record: CategoryDto) => (
+            <Switch 
+                checked={v} 
+                onChange={(checked) => handleToggleActive(record, checked)} 
+            />
+        )
     },
 
     { 
         title: "Created At", 
         dataIndex: "createAt",         
-            render: (v: string) => new Date(v).toLocaleString()
+            render: (v: string) => new Date(v).toLocaleDateString()
 
     },
 

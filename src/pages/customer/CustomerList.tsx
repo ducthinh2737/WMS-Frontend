@@ -1,4 +1,4 @@
-import { Button, message, Popconfirm, Table } from "antd";
+import { Button, message, Popconfirm, Table, Switch } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { customerApi } from "../../api/customer.api";
@@ -14,6 +14,19 @@ export default function CustomerList() {
             setData(res.data);
         } catch {
             message.error("Failed to fetch customers");
+        }
+    };
+
+    const handleToggleActive = async (record: CustomerDto, checked: boolean) => {
+        try {
+            await customerApi.update(record.id, {
+                ...record,
+                isActive: checked
+            });
+            message.success(`Status updated for ${record.name}`);
+            fetchData();
+        } catch {
+            message.error("Failed to update status");
         }
     };
 
@@ -38,7 +51,17 @@ export default function CustomerList() {
         { title: "Email", dataIndex: "email", key: "email" },
         { title: "Phone", dataIndex: "phone", key: "phone" },
         { title: "Address", dataIndex: "address", key: "address" },
-        { title: "Active", dataIndex: "isActive", key: "isActive", render: (v: boolean) => (v ? "Yes" : "No") },
+        { 
+            title: "Active", 
+            dataIndex: "isActive", 
+            key: "isActive", 
+            render: (v: boolean, record: CustomerDto) => (
+                <Switch 
+                    checked={v} 
+                    onChange={(checked) => handleToggleActive(record, checked)} 
+                />
+            ) 
+        },
         {
             title: "Actions",
             key: "actions",

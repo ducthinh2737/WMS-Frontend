@@ -144,10 +144,15 @@ export default function AppRoutes() {
                 <Route path="customer/edit/:id" element={<CustomerForm mode="edit" />} />
                 <Route path="customer/create" element={<CustomerForm mode="create" />} />
 
-                {/* PRODUCT */}
-                <Route path="product" element={<ProductList />} />
-                <Route path="product/create" element={<ProductForm />} />
-                <Route path="product/edit/:id" element={<ProductForm />} />  
+                {/* PRODUCT / FINISHED GOODS */}
+                <Route path="product" element={<ProductList type={1} />} />
+                <Route path="product/create" element={<ProductForm type={1} />} />
+                <Route path="product/edit/:id" element={<ProductForm type={1} />} />  
+
+                {/* RAW MATERIAL */}
+                <Route path="master/raw-materials" element={<ProductList type={0} />} />
+                <Route path="master/raw-materials/create" element={<ProductForm type={0} />} />
+                <Route path="master/raw-materials/edit/:id" element={<ProductForm type={0} />} />
 
                 {/* INVENTORY */}
                 <Route path="inventory" element={<InventoryList />} />

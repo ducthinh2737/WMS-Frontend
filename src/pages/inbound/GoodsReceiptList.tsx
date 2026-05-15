@@ -16,12 +16,12 @@ import CreateProductionGRModal from "./CreateProductionGRModal";
 
 // ================= ENUM =================
 const GRStatus = {
-  Pending:           0,
-  Approved:          1,
-  Partial:           2,
-  Completed:         3,
-  Rejected:          4,
-  OutOfStock:        5,   // ← thêm
+  Pending: 0,
+  Approved: 1,
+  Partial: 2,
+  Completed: 3,
+  Rejected: 4,
+  OutOfStock: 5,   // ← thêm
   InsufficientStock: 6,   // ← thêm
 } as const;
 
@@ -29,13 +29,13 @@ type GRStatus = (typeof GRStatus)[keyof typeof GRStatus];
 
 // ================= STATUS MAP =================
 const StatusMapping: Record<number, { label: string; color: string }> = {
-  0: { label: "Chờ xử lý",       color: "orange"  },
-  1: { label: "Đã duyệt",        color: "blue"    },
-  2: { label: "Nhận một phần",   color: "cyan"    },
-  3: { label: "Hoàn thành",      color: "green"   },
-  4: { label: "Từ chối",         color: "red"     },
-  5: { label: "Hết hàng",        color: "volcano" }, // ← thêm
-  6: { label: "Không đủ hàng",   color: "gold"    }, // ← thêm
+  0: { label: "Chờ xử lý", color: "orange" },
+  1: { label: "Đã duyệt", color: "blue" },
+  2: { label: "Nhận một phần", color: "cyan" },
+  3: { label: "Hoàn thành", color: "green" },
+  4: { label: "Từ chối", color: "red" },
+  5: { label: "Hết hàng", color: "volcano" }, // ← thêm
+  6: { label: "Không đủ hàng", color: "gold" }, // ← thêm
 };
 
 export default function GoodsReceiptList() {
@@ -55,7 +55,7 @@ export default function GoodsReceiptList() {
       setGrList(res.data || []);
     } catch (err) {
       console.error(err);
-      message.error("Không thể tải danh sách đơn nhập");
+      message.error("Không thể tải danh sách phiếu nhập");
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export default function GoodsReceiptList() {
   const handleApproveProduction = async (record: GoodsReceiptDto) => {
     try {
       await inboundApi.approveProductionGR(record);
-      message.success("Duyệt đơn nhập thành công");
+      message.success("Duyệt phiếu nhập thành công");
       fetchGRs();
     } catch (err: any) {
       message.error(err?.response?.data?.message || "Duyệt thất bại");
@@ -99,7 +99,7 @@ export default function GoodsReceiptList() {
 
   const columns = [
     {
-      title: "Mã đơn nhập",
+      title: "Mã phiếu nhập",
       dataIndex: "code",
       render: (t: string) => <strong>{t}</strong>,
     },
@@ -126,7 +126,7 @@ export default function GoodsReceiptList() {
             return (
               <Space wrap>
                 <Popconfirm
-                  title="Xác nhận duyệt đơn nhập?"
+                  title="Xác nhận duyệt phiếu nhập?"
                   onConfirm={() => handleApproveProduction(record)}
                   okText="Duyệt"
                   cancelText="Hủy"
@@ -163,7 +163,7 @@ export default function GoodsReceiptList() {
                 size="small"
                 onClick={() => handleOpenCounting(record)}
               >
-                Kiểm kê
+                Kiểm hàng
               </Button>
             );
 
@@ -186,9 +186,9 @@ export default function GoodsReceiptList() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-        <h2>Đơn nhập</h2>
+        <h2>Phiếu nhập</h2>
         <Button type="primary" onClick={() => setOpenCreateProduction(true)}>
-          + Tạo đơn nhập
+          + Tạo phiếu nhập
         </Button>
       </div>
 

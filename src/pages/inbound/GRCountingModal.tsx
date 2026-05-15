@@ -214,7 +214,7 @@ export default function GRCountingModal({
   return (
     <>
       <Modal
-        title={`Kiểm đếm phiếu nhập: ${gr.code}`}
+        title={`Kiểm hàng phiếu nhập: ${gr.code}`}
         open={open}
         onCancel={onCancel}
         onOk={submitCounting}
@@ -225,13 +225,13 @@ export default function GRCountingModal({
       >
         <div style={{ marginBottom: 16 }}>
           <Text strong>Mã PO: </Text>
-          <Text>{gr.purchaseOrderId}</Text>
+          <Text>{gr.inboundOrderId}</Text>
           <br />
           <Text strong>Kho nhận: </Text>
           <Text>{gr.warehouseId}</Text>
         </div>
 
-        <Divider orientation={"left" as any}>Danh sách sản phẩm</Divider>
+        <Divider orientation={"left" as any}>Danh sách sản phẩm kiểm hàng</Divider>
 
         <Table
           dataSource={gr.items}

@@ -88,7 +88,7 @@ export default function CreateProductionGRModal({
 
       await inboundApi.createGR(payload);
 
-      message.success("Tạo đơn nhập thành công");
+      message.success("Tạo phiếu nhập thành công");
 
       form.resetFields();
       onSuccess();
@@ -98,7 +98,7 @@ export default function CreateProductionGRModal({
       if (apiErrors) {
         message.error(
           "Lỗi dữ liệu: " +
-            Object.values(apiErrors).flat().join(", ")
+          Object.values(apiErrors).flat().join(", ")
         );
       } else {
         message.error(error.response?.data?.message || "Thất bại");
@@ -112,7 +112,7 @@ export default function CreateProductionGRModal({
   return (
     <Modal
       open={open}
-      title="Tạo Đơn Nhập Sản Xuất"
+      title="Tạo phiếu nhập Sản Xuất"
       onCancel={onCancel}
       width={750}
       footer={null}

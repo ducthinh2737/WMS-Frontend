@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Input, Popconfirm, message } from "antd";
+import { Button, Input, Popconfirm, message, Switch } from "antd";
 import { brandApi } from "../../api/brand.api";
 import PageHeader from "../../components/PageHeader";
 import WmsTable from "../../components/Wmstable";
@@ -14,6 +14,19 @@ export default function BrandList() {
     const load = async () => {
         const res = await brandApi.getAll();
         setData(res.data);
+    };
+
+    const handleToggleActive = async (record: BrandDto, checked: boolean) => {
+        try {
+            await brandApi.update(record.id, {
+                ...record,
+                isActive: checked
+            });
+            message.success(`Status updated for ${record.name}`);
+            load();
+        } catch {
+            message.error("Failed to update status");
+        }
     };
 
     useEffect(() => { load(); }, []);
@@ -52,7 +65,12 @@ export default function BrandList() {
                         title: "Active",
                         dataIndex: "isActive",
                         width: 100,
-                        render: (val: boolean) => (val ? "Yes" : "No")
+                        render: (val: boolean, record: BrandDto) => (
+                            <Switch 
+                                checked={val} 
+                                onChange={(checked) => handleToggleActive(record, checked)} 
+                            />
+                        )
                     },
                     {
                         title: "Actions",

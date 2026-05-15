@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Form, Input, Button, Card, message } from "antd";
+import { Form, Input, Button, Card, message, Switch, Row, Col, Space } from "antd";
 import { brandApi } from "../../api/brand.api";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 
 export default function BrandEdit() {
     const { id } = useParams();
@@ -16,51 +17,74 @@ export default function BrandEdit() {
             code: data.code ?? "",
             name: data.name,
             description: data.description ?? "",
-            isActive: data.isActive ? "true" : "false"  
+            isActive: data.isActive
         });
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); }, [id]);
 
     const onFinish = async (values: any) => {
         const dto = {
             ...values,
-            code: values.code?.trim() === "" ? null : values.code,
-            isActive: values.isActive === "true"
+            code: values.code?.trim() === "" ? null : values.code
         };
 
         await brandApi.update(Number(id), dto);
 
-        message.success("Updated");
+        message.success("Cập nhật thành công");
         navigate("/master/brands");
     };
 
     return (
-        <Card title="Edit Brand" style={{ width: 500, margin: "20px auto" }}>
-            <Form layout="vertical" form={form} onFinish={onFinish}>
+        <div style={{ padding: "24px" }}>
+            <Card 
+                title={
+                    <Space>
+                        <Button 
+                            icon={<ArrowLeftOutlined />} 
+                            onClick={() => navigate("/master/brands")} 
+                            type="text" 
+                        />
+                        <span>Cập nhật thương hiệu</span>
+                    </Space>
+                }
+                bordered={false}
+                style={{ maxWidth: 600, margin: "0 auto", boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)" }}
+            >
+                <Form layout="vertical" form={form} onFinish={onFinish}>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item label="Mã thương hiệu" name="code">
+                                <Input placeholder="Để trống nếu tự sinh" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Tên thương hiệu" name="name" rules={[{ required: true, message: "Vui lòng nhập tên" }]}>
+                                <Input />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
-                <Form.Item label="Brand Code" name="code">
-                    <Input placeholder="Optional: Leave blank for auto or no code" />
-                </Form.Item>
-                <Form.Item label="Active" name="isActive" initialValue={true}>
-    <select>
-        <option value="true">Active</option>
-        <option value="false">Inactive</option>
-    </select>
-</Form.Item>
+                    <Form.Item label="Mô tả" name="description">
+                        <Input.TextArea rows={3} />
+                    </Form.Item>
 
-                <Form.Item label="Brand Name" name="name" rules={[{ required: true }]}>
-                    <Input />
-                </Form.Item>
+                    <Form.Item label="Trạng thái hoạt động" name="isActive" valuePropName="checked">
+                        <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+                    </Form.Item>
 
-                <Form.Item label="Description" name="description">
-                    <Input.TextArea rows={3} />
-                </Form.Item>
-
-                <Button type="primary" htmlType="submit">
-                    Save
-                </Button>
-            </Form>
-        </Card>
+                    <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
+                        <Space>
+                            <Button onClick={() => navigate("/master/brands")}>
+                                Hủy bỏ
+                            </Button>
+                            <Button type="primary" htmlType="submit" size="large">
+                                Lưu thay đổi
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </Form>
+            </Card>
+        </div>
     );
 }

@@ -56,7 +56,7 @@ interface ScanResult {
   needsApproval: boolean;
 }
 
-const STEPS = [{ title: "Scan QR" }, { title: "Kiểm đếm" }, { title: "Hoàn tất" }];
+const STEPS = [{ title: "Scan QR" }, { title: "Kiểm hàng" }, { title: "Hoàn tất" }];
 const QR_CAM_ID = "wms-qr-camera";
 
 type ScanMode = "camera" | "upload" | "manual";

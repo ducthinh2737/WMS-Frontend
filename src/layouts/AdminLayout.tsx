@@ -77,7 +77,7 @@ export default function AdminLayout() {
                 children: [
                   {
                     key: "users-list",
-                    label: <Link to="users">User List</Link>,
+                    label: <Link to="/users">User List</Link>,
                   },
                 ],
               },
@@ -111,6 +111,17 @@ export default function AdminLayout() {
                   {
                     key: "transfer-list",
                     label: <Link to="/transfer">Transfer List</Link>,
+                  },
+                ],
+              },
+              {
+                key: "stocktake",
+                icon: <ScanOutlined />,
+                label: "STOCKTAKE",
+                children: [
+                  {
+                    key: "stocktake-list",
+                    label: <Link to="/stocktake">Stocktake List</Link>,
                   },
                 ],
               },
@@ -158,23 +169,27 @@ export default function AdminLayout() {
                   },
                   {
                     key: "master-categories",
-                    label: <Link to="category">Categories</Link>,
+                    label: <Link to="/category">Categories</Link>,
                   },
                   {
                     key: "master-units",
-                    label: <Link to="unit">Units</Link>,
+                    label: <Link to="/unit">Units</Link>,
                   },
                   {
                     key: "master-suppliers",
-                    label: <Link to="supplier">Suppliers</Link>,
+                    label: <Link to="/supplier">Suppliers</Link>,
                   },
                   {
                     key: "master-customers",
-                    label: <Link to="customer">Customers</Link>,
+                    label: <Link to="/customer">Customers</Link>,
+                  },
+                  {
+                    key: "master-raw-materials",
+                    label: <Link to="/master/raw-materials">Raw Materials</Link>,
                   },
                   {
                     key: "master-products",
-                    label: <Link to="product">Products</Link>,
+                    label: <Link to="/product">Products</Link>,
                   },
                 ],
               },

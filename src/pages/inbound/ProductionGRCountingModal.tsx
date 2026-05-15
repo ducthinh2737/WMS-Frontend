@@ -72,7 +72,7 @@ export default function ProductionGRCountingModal({
 
       await inboundApi.countingProductionGR(payload);
 
-      message.success("Kiểm đếm thành công");
+      message.success("Kiểm hàng thành công");
       onSuccess();
     } catch (err: any) {
       console.error("Counting Error:", err.response?.data);
@@ -88,7 +88,7 @@ export default function ProductionGRCountingModal({
   return (
     <Modal
       open={open}
-      title={`Kiểm đếm - Phiếu: ${gr.code}`}
+      title={`Kiểm hàng - Phiếu: ${gr.code}`}
       onCancel={onCancel}
       onOk={onSubmit}
       confirmLoading={loading}
