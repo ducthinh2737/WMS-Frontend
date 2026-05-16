@@ -88,7 +88,7 @@ export default function InventoryAdjustForm({ open, onClose, onSuccess }: Props)
       onCancel={onClose}
       onOk={() => form.submit()}
       confirmLoading={submitting}
-      destroyOnClose
+      destroyOnHidden
       width={400}
       okText="Xác nhận"
       cancelText="Hủy"

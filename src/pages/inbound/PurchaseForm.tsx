@@ -156,7 +156,7 @@ export default function PurchaseCreateModal({
       width={1000}
       okText="Tạo đơn"
       cancelText="Hủy"
-      destroyOnClose
+      destroyOnHidden
       maskClosable={false}
     >
       {submitError && (

@@ -60,7 +60,7 @@ export default function AssignRoleModal({ open, roleId, roleName, onCancel, onSu
                 onCancel();
             }}
             footer={null}
-            destroyOnClose
+            destroyOnHidden
             width={450}
         >
             <Form form={form} onFinish={onFinish} layout="vertical" style={{ marginTop: 20 }}>

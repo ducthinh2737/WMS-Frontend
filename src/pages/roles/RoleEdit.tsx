@@ -58,7 +58,7 @@ export default function RoleEditModal({ open, roleId, onCancel, onSuccess }: Pro
       confirmLoading={loading}
       okText="Save"
       cancelText="Cancel"
-      destroyOnClose
+      destroyOnHidden
     >
       <Spin spinning={fetching}>
         <Form 

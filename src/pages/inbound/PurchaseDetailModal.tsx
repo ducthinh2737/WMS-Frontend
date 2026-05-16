@@ -92,7 +92,7 @@ export default function PurchaseDetailModal({ open, onCancel, po }: Props) {
       width={1000} // Tăng chiều rộng để đủ chỗ cho cột status mới
       title={`Chi tiết đơn mua hàng - ${po.code}`}
       centered
-      destroyOnClose
+      destroyOnHidden
     >
       <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
         <Descriptions.Item label="Mã PO">

@@ -100,7 +100,7 @@ export default function WarehouseEditModal({ open, warehouseId, onCancel, onSucc
       confirmLoading={loading}
       width={600}
       centered
-      destroyOnClose
+      destroyOnHidden
       // Custom footer để thêm nút Khóa kho
       footer={[
         <Popconfirm key="lock" title="Khóa kho này?" onConfirm={handleLock}>

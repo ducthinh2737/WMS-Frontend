@@ -131,7 +131,7 @@ export default function CreateProductionGRModal({
       onCancel={onCancel}
       width={750}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical">
 

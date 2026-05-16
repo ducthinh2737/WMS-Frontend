@@ -87,7 +87,7 @@ export default function RolePermissionModal({ open, roleId, roleName, onCancel, 
       okText="Lưu thay đổi"
       cancelText="Đóng"
       centered // Đưa toàn bộ Modal ra giữa màn hình (theo chiều dọc)
-      destroyOnClose
+      destroyOnHidden
     >
       <Spin spinning={fetching}>
         <Divider style={{ fontSize: '12px', color: '#888' }}>

@@ -49,7 +49,7 @@ export default function WarehouseCreateModal({ open, onCancel, onSuccess }: Prop
       okText="Tạo kho"
       cancelText="Hủy"
       centered
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

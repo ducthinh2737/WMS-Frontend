@@ -19,7 +19,7 @@ export default function SaleOrderCreateModal({
       onCancel={onClose}
       footer={null}
       width={1000}
-      destroyOnClose
+      destroyOnHidden
       centered
       maskClosable={false}
     >

@@ -94,7 +94,7 @@ export default function ProductionGRCountingModal({
       confirmLoading={loading}
       okText="Xác nhận nhập kho"
       cancelText="Hủy bỏ"
-      destroyOnClose
+      destroyOnHidden
       width={750}
     >
       <div style={{ marginBottom: 16, color: "#666" }}>

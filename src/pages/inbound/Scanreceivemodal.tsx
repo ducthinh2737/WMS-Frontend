@@ -355,7 +355,7 @@ export default function ScanReceiveModal({ open, onCancel, onSuccess }: Props) {
         title={<Space><ScanOutlined style={{ color: "#1677ff" }} /><span>Nhập kho nhanh — Scan PO</span></Space>}
         width={820}
         footer={footer}
-        destroyOnClose
+        destroyOnHidden
         maskClosable={false}
         styles={{ body: { padding: "20px 24px", minHeight: 420 } }}
       >

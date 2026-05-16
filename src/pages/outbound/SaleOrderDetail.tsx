@@ -137,7 +137,7 @@ export default function SalesOrderDetailModal({
       onCancel={onCancel}
       footer={null}
       width={1000}
-      destroyOnClose
+      destroyOnHidden
     >
       {loading ? (
         <div style={{ textAlign: "center", padding: 50 }}>Đang tải...</div>

@@ -33,7 +33,7 @@ export default function RoleCreateModal({ open, onCancel, onSuccess }: Props) {
             onCancel={onCancel}
             onOk={() => form.submit()} // Liên kết nút OK của Modal với Form submit
             confirmLoading={loading}
-            destroyOnClose
+            destroyOnHidden
             okText="Create"
             cancelText="Cancel"
         >

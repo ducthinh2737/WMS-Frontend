@@ -39,7 +39,7 @@ export default function UserCreateModal({ open, onCancel, onSuccess }: Props) {
             open={open}
             onCancel={onCancel}
             footer={null} // Để dùng nút Submit của Form
-            destroyOnClose // Xóa trắng form mỗi khi đóng/mở lại
+            destroyOnHidden // Xóa trắng form mỗi khi đóng/mở lại
         >
             <Form 
                 form={form} 

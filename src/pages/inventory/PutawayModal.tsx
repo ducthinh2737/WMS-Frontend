@@ -237,7 +237,10 @@ export default function PutawayModal({
               },
             ]}
           >
-            <Select disabled options={lots} />
+            <Select 
+              disabled 
+              options={lots.map(({ label, value }) => ({ label, value }))} 
+            />
           </Form.Item>
 
           {/* STORAGE */}

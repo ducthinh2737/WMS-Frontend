@@ -46,7 +46,7 @@ export default function LocationCreateModal({ open, warehouseId, onCancel, onSuc
       onOk={() => form.submit()}
       confirmLoading={loading}
       centered
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ type: 2, isActive: true }}>
         <Form.Item

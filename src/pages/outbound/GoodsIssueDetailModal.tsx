@@ -244,7 +244,7 @@ export default function GoodsIssueDetailModal({
       onCancel={onClose}
       footer={null}
       width={1200}
-      destroyOnClose
+      destroyOnHidden
     >
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ReloadOutlined />} onClick={() => loadDetail()}>

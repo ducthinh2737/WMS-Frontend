@@ -173,7 +173,7 @@ export default function TransferList() {
         onCancel={() => setIsCreateOpen(false)}
         footer={null}
         width={1000}
-        destroyOnClose
+        destroyOnHidden
       >
         <TransferCreateForm
           onSuccess={() => {

@@ -79,7 +79,7 @@ export default function CreateProductionGIModal({
       onCancel={onCancel}
       onOk={submit}
       confirmLoading={loading}
-      destroyOnClose
+      destroyOnHidden
       width={700}
     >
       <Form

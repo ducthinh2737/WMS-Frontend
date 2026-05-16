@@ -79,7 +79,7 @@ export default function LocationEditModal({
       onOk={() => form.submit()}
       confirmLoading={loading}
       centered
-      destroyOnClose
+      destroyOnHidden
     >
       <Spin spinning={fetching}>
         <Form 

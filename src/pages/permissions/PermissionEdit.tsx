@@ -45,7 +45,7 @@ export default function PermissionFormModal({ open, data, onCancel, onSuccess }:
       onCancel={onCancel}
       onOk={() => form.submit()}
       confirmLoading={loading}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={onFinish}>
         <Form.Item label="Code" name="code" rules={[{ required: true }]}>
