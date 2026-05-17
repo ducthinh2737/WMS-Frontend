@@ -44,7 +44,7 @@ export default function GoodsIssueCreate() {
 
   const loadSO = async () => {
     try {
-      const res = await outboundApi.get(soId!);
+      const res = await outboundApi.getOrder(soId!);
       setItems(res.data.items || []);
     } catch {
       message.error("Lỗi tải thông tin đơn bán hàng");

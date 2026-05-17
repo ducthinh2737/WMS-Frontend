@@ -4,6 +4,7 @@ export interface GoodsIssueAllocateDto {
   locationId: string;
   allocatedQty: number;
   pickedQty: number;
+  issuedQty: number;
   status?: number;
   locationCode?: string;
   locationName?: string;

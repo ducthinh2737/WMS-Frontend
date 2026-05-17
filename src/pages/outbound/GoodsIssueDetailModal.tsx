@@ -62,7 +62,7 @@ export default function GoodsIssueDetailModal({
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [tempPicked, setTempPicked] = useState<Record<string, number>>({});
-  const [hasShippingError, setHasShippingError] = useState(false);
+
 
   /* ================= LOAD ================= */
   const loadDetail = async (silent = false) => {
@@ -71,7 +71,7 @@ export default function GoodsIssueDetailModal({
       const res = await outboundApi.getGoodsIssue(goodsIssueId);
       setDetail(res.data);
       setTempPicked({});
-      setHasShippingError(false);
+      
     } catch {
       message.error("Không tải được thông tin phiếu xuất kho");
     } finally {
@@ -95,39 +95,35 @@ export default function GoodsIssueDetailModal({
   const getTempTotalPicked = (item: GoodsIssueItemDtoForFrontend) =>
     item.allocations.reduce((sum, a) => {
       if (isInvalidLocation(a)) return sum;
-      const v = tempPicked[a.id] ?? a.pickedQty;
-      return sum + (v > 0 ? v : 0);
+      const incremental = tempPicked[a.id] ?? 0;
+      return sum + a.pickedQty + incremental;
     }, 0);
 
   const canPick = (item: GoodsIssueItemDtoForFrontend) =>
-    item.status < 3 &&
-    getTempTotalPicked(item) > item.pickedQty &&
-    !hasInvalidAllocation(item);
+    item.pickedQty < item.quantity &&
+    item.allocations
+      .filter((a) => !isInvalidLocation(a))  // bỏ qua invalid
+      .some((a) => (tempPicked[a.id] ?? 0) > 0);  // có qty mới nhập
 
-  const canIssue = (item: GoodsIssueItemDtoForFrontend) => {
-    const remain = item.quantity - item.issuedQty;
-    return item.status < 3 && item.pickedQty > item.issuedQty && remain > 0;
-  };
+  const canIssue = (item: GoodsIssueItemDtoForFrontend) =>
+    item.status >= 2 &&
+    item.pickedQty > item.issuedQty &&
+    item.quantity - item.issuedQty > 0;
 
   /* ================= PICK ================= */
   const handlePickMaxSingle = (alloc: GoodsIssueAllocateDto) => {
     if (isInvalidLocation(alloc)) return;
-    setTempPicked((p) => ({ ...p, [alloc.id]: alloc.allocatedQty }));
+    setTempPicked((p) => ({ ...p, [alloc.id]: alloc.allocatedQty - alloc.pickedQty }));
   };
 
   const handlePicking = async (item: GoodsIssueItemDtoForFrontend) => {
     if (!detail) return;
 
-    if (hasInvalidAllocation(item)) {
-      message.warning("Còn phân bổ chưa xác định vị trí, không thể Picking");
-      return;
-    }
-
     const items = item.allocations
       .map((a) => {
-        if (isInvalidLocation(a) || a.status === 2) return null;
+        if (isInvalidLocation(a) || a.allocatedQty - a.pickedQty <= 0) return null;
         const qty = tempPicked[a.id];
-        if (qty !== undefined && qty !== a.pickedQty) {
+        if (qty && qty > 0) {
           return {
             id: a.id,
             pickedQty: qty,
@@ -183,10 +179,15 @@ export default function GoodsIssueDetailModal({
 
   /* ================= ISSUE ================= */
   const handleIssue = (item: GoodsIssueItemDtoForFrontend) => {
-    const maxQty = Math.min(
+    const maxQty = Math.max(0, Math.min(
       item.quantity - item.issuedQty,
       item.pickedQty - item.issuedQty
-    );
+    ));
+
+    if (maxQty <= 0) {
+      message.warning("Không có số lượng hợp lệ để xuất");
+      return;
+    }
 
     let issueQty = maxQty;
 
@@ -212,7 +213,7 @@ export default function GoodsIssueDetailModal({
       onOk: async () => {
         if (issueQty <= 0) {
           message.warning("Số lượng phải lớn hơn 0");
-          return;
+          return Promise.reject();
         }
         try {
           await outboundApi.issue({
@@ -233,8 +234,8 @@ export default function GoodsIssueDetailModal({
   const overallProgress =
     detail && detail.items.length
       ? (detail.items.reduce((s, i) => s + i.issuedQty, 0) /
-          detail.items.reduce((s, i) => s + i.quantity, 0)) *
-        100
+        detail.items.reduce((s, i) => s + i.quantity, 0)) *
+      100
       : 0;
 
   return (
@@ -298,7 +299,7 @@ export default function GoodsIssueDetailModal({
             showIcon
             style={{ marginBottom: 12 }}
             message="Có phân bổ chưa xác định vị trí"
-            description="Các dòng này đã bị khóa. Vui lòng cấu hình Location trước khi Picking."
+
           />
         )}
 
@@ -321,14 +322,23 @@ export default function GoodsIssueDetailModal({
             { title: "Phân bổ", dataIndex: "allocatedQty", width: 100, align: "right" },
             { title: "Đã Pick", dataIndex: "pickedQty", width: 100, align: "right" },
             {
+              title: "Trạng thái",
+              width: 120,
+              render: (_: unknown, a: GoodsIssueAllocateDto) => (
+                <Tag color={giaStatusMap[a.status!]?.color || "default"}>
+                  {giaStatusMap[a.status!]?.label || "Không xác định"}
+                </Tag>
+              ),
+            },
+            {
               title: "Pick",
               width: 140,
               render: (_, a: GoodsIssueAllocateDto) => (
                 <InputNumber
                   min={0}
-                  max={a.allocatedQty}
-                  value={tempPicked[a.id] ?? a.pickedQty}
-                  disabled={a.status === 2 || isInvalidLocation(a)}
+                  max={a.allocatedQty - a.pickedQty}
+                  value={tempPicked[a.id] ?? 0}
+                  disabled={a.allocatedQty - a.issuedQty <= 0 || isInvalidLocation(a) || a.allocatedQty - a.pickedQty <= 0}
                   onChange={(v) =>
                     setTempPicked((p) => ({ ...p, [a.id]: Number(v) || 0 }))
                   }
@@ -342,8 +352,10 @@ export default function GoodsIssueDetailModal({
               render: (_, a: GoodsIssueAllocateDto) =>
                 isInvalidLocation(a) ? (
                   <Tag color="warning">Chưa có vị trí</Tag>
-                ) : a.status === 2 ? (
-                  <Tag color="success">Đã Pick</Tag>
+                ) : a.allocatedQty - a.issuedQty <= 0 ? (
+                  <Tag color="success">Hoàn tất</Tag>
+                ) : a.allocatedQty - a.pickedQty <= 0 ? (
+                  <Tag color="processing">Đã Pick đủ</Tag>
                 ) : (
                   <Button
                     icon={<CheckCircleOutlined />}
