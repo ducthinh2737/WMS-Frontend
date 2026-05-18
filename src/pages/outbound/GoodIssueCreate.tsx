@@ -146,7 +146,25 @@ export default function GoodsIssueCreate() {
           dataSource={items}
           bordered
           columns={[
-            { title: "Sản phẩm", dataIndex: "productName", key: "productName" },
+            { 
+              title: "Sản phẩm", 
+              key: "productName",
+              render: (_, record) => {
+                const totalInventory = (locationInventoryMap[record.productId] || []).reduce((sum, loc) => sum + loc.qty, 0);
+                return (
+                  <div>
+                    <div>{record.productName}</div>
+                    {warehouseId && (
+                      <div style={{ marginTop: 4 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Tồn kho hiện có: <Text strong type="success">{totalInventory}</Text>
+                        </Text>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+            },
             { title: "SL Đơn hàng", dataIndex: "quantity", key: "quantity", align: "center" },
             {
               title: "Vị trí lấy hàng (Location)",
