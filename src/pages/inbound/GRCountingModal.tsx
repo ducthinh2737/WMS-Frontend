@@ -143,8 +143,14 @@ export default function GRCountingModal({
   const columns = [
     {
       title: "Sản phẩm",
-      render: (_: any, record: GoodsReceiptItemDto) =>
-        record.productName || `ID: ${record.productId}`,
+      render: (_: any, record: any) => (
+        <div>
+          <div>{record.productName || `ID: ${record.productId}`}</div>
+          {record.unitName && (
+            <span style={{ fontSize: "12px", color: "#8c8c8c" }}>ĐVT: {record.unitName}</span>
+          )}
+        </div>
+      ),
     },
     {
       title: "SL yêu cầu",

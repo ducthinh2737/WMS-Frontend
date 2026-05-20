@@ -12,6 +12,7 @@ import {
 import { useState, useEffect } from "react";
 import type { GoodsReceiptDto } from "../../types/inbound";
 import { inboundApi } from "../../api/inbound.api";
+import { productApi } from "../../api/product.api";
 import dayjs from "dayjs";
 
 interface Props {
@@ -29,8 +30,13 @@ export default function ProductionGRCountingModal({
 }: Props) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
 
   const items = gr.productionReceiptItems ?? [];
+
+  useEffect(() => {
+    productApi.getAll().then(res => setProducts(res.data || []));
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -124,9 +130,14 @@ export default function ProductionGRCountingModal({
                 >
                   <Row gutter={16}>
                     <Col span={12}>
-                      <div style={{ marginBottom: 8 }}>
-                        <strong>Sản phẩm ID:</strong> {item.productId}
+                      <div style={{ marginBottom: 4 }}>
+                        <strong>{products.find(p => p.id === item.productId)?.name || `Sản phẩm ID: ${item.productId}`}</strong>
                       </div>
+                      {item.unitName && (
+                        <div style={{ fontSize: "12px", color: "#888", marginBottom: 4 }}>
+                          Đơn vị tính: {item.unitName}
+                        </div>
+                      )}
                       <div style={{ fontSize: "12px", color: "#888" }}>
                         Tổng dự kiến: {item.quantity} | Đã nhận:{" "}
                         {item.receipt_Qty || 0}

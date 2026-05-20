@@ -1,8 +1,10 @@
-import { Layout, Menu, Button } from "antd";
+import { Layout, Menu, Button, Badge } from "antd";
 import { useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 import "../styles/global.css";
-import { DashboardOutlined } from "@ant-design/icons";
+import { DashboardOutlined, BellOutlined, SyncOutlined } from "@ant-design/icons";
+import { useNotification } from "../hooks/useNotification";
+import NotificationSidebar from "../components/NotificationSidebar";
 
 
 import {
@@ -23,6 +25,8 @@ const { Sider, Content, Header } = Layout;
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { unreadCount, isPolling } = useNotification();
 
   const siderWidth = 240;
   const siderCollapsedWidth = 80;
@@ -71,97 +75,27 @@ export default function AdminLayout() {
                 label: <Link to="/dashboard">Dashboard</Link>,
               },
               {
-                key: "users",
-                icon: <UserOutlined />,
-                label: "USERS",
-                children: [
-                  {
-                    key: "users-list",
-                    label: <Link to="/users">User List</Link>,
-                  },
-                ],
+                key: "inbound",
+                icon: <ShoppingCartOutlined />,
+                label: <Link to="/inbound/receipt">Import </Link>,
+
               },
               {
-                key: "roles",
-                icon: <TeamOutlined />,
-                label: "ROLES",
-                children: [
-                  {
-                    key: "roles-list",
-                    label: <Link to="/roles">Role List</Link>,
-                  },
-                ],
+                key: "outbound",
+                icon: <FileTextOutlined />,
+                label: <Link to="/outbound/issue">Export </Link>,
+
               },
-              {
-                key: "warehouse",
-                icon: <HomeOutlined />,
-                label: "WAREHOUSE",
-                children: [
-                  {
-                    key: "warehouse-list",
-                    label: <Link to="/warehouse">Warehouses</Link>,
-                  },
-                ],
-              },
-              {
-                key: "transfer",
-                icon: <SwapOutlined />,
-                label: "TRANSFER",
-                children: [
-                  {
-                    key: "transfer-list",
-                    label: <Link to="/transfer">Transfer List</Link>,
-                  },
-                ],
-              },
-              {
-                key: "stocktake",
-                icon: <ScanOutlined />,
-                label: "STOCKTAKE",
-                children: [
-                  {
-                    key: "stocktake-list",
-                    label: <Link to="/stocktake">Stocktake List</Link>,
-                  },
-                ],
-              },
-              {
-                key: "location",
-                icon: <EnvironmentOutlined />,
-                label: "LOCATION",
-                children: [
-                  {
-                    key: "location-list",
-                    label: <Link to="/warehouse/locations">Locations</Link>,
-                  },
-                ],
-              },
+
               {
                 key: "inventory",
                 icon: <DatabaseOutlined />,
-                label: "INVENTORY",
-                children: [
-                  {
-                    key: "inventory-list",
-                    label: <Link to="/inventory">Inventory List</Link>,
-                  },
-                ],
-              },
-              {
-                key: "permissions",
-                icon: <LockOutlined />,
-                label: "PERMISSIONS",
-                children: [
-                  {
-                    key: "permissions-list",
-                    label: <Link to="/permissions">Permission List</Link>,
-                  },
-                ],
+                label: <Link to="/inventory">Inventory List</Link>,
               },
               {
                 key: "master",
                 icon: <AppstoreOutlined />,
-                label: "MASTER DATA",
+                label: "Master Data ",
                 children: [
                   {
                     key: "master-brands",
@@ -194,27 +128,52 @@ export default function AdminLayout() {
                 ],
               },
               {
-                key: "inbound",
-                icon: <ShoppingCartOutlined />,
-                label: "INBOUND",
-                children: [
-                  {
-                    key: "inbound-list",
-                    label: <Link to="/inbound/receipt">INBOUND LIST</Link>,
-                  },
-                ],
+                key: "warehouse",
+                icon: <HomeOutlined />,
+                label: <Link to="/warehouse">Warehouses</Link>,
               },
               {
-                key: "outbound",
-                icon: <FileTextOutlined />,
-                label: "OUTBOUND",
-                children: [
-                  {
-                    key: "outbound-list",
-                    label: <Link to="/outbound/issue">OUTBOUND LIST</Link>,
-                  },
-                ],
+                key: "location",
+                icon: <EnvironmentOutlined />,
+                label: <Link to="/warehouse/locations">Locations</Link>,
+
               },
+              {
+                key: "transfer",
+                icon: <SwapOutlined />,
+                label: <Link to="/transfer">Transfer List</Link>,
+
+              },
+              {
+                key: "users",
+                icon: <UserOutlined />,
+                label: <Link to="/users">User List</Link>,
+
+              },
+
+
+
+              // {
+              //   key: "stocktake",
+              //   icon: <ScanOutlined />,
+              //   label: <Link to="/stocktake">Stocktake List</Link>,
+
+              // },
+
+              {
+                key: "roles",
+                icon: <TeamOutlined />,
+                label: <Link to="/roles">Role List</Link>,
+
+              },
+              {
+                key: "permissions",
+                icon: <LockOutlined />,
+                label: <Link to="/permissions">Permission List</Link>,
+
+              },
+
+
             ]}
           />
         </div>
@@ -230,19 +189,54 @@ export default function AdminLayout() {
         <Header
           style={{
             background: "#fff",
-            padding: 12,
+            padding: "0 24px",
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
+            boxShadow: "0 1px 4px rgba(0,21,41,.08)",
+            zIndex: 10,
           }}
         >
-          <Button
-            type="text"
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ marginRight: 12 }}
-          >
-            {collapsed ? "▶" : "◀"}
-          </Button>
-          <h3>Warehouse Management System</h3>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <Button
+              type="text"
+              onClick={() => setCollapsed(!collapsed)}
+              style={{ marginRight: 12 }}
+            >
+              {collapsed ? "▶" : "◀"}
+            </Button>
+            <h3 style={{ margin: 0, fontWeight: 600 }}>Warehouse Management System</h3>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <Badge count={unreadCount} overflowCount={99} offset={[-2, 2]} style={{ boxShadow: '0 0 0 1px #fff' }}>
+              <Button
+                type="text"
+                shape="circle"
+                icon={
+                  isPolling ? (
+                    <SyncOutlined spin style={{ fontSize: 20, color: "#1677ff" }} />
+                  ) : (
+                    <BellOutlined
+                      style={{
+                        fontSize: 20,
+                        color: unreadCount > 0 ? "#faad14" : "#475569",
+                      }}
+                    />
+                  )
+                }
+                onClick={() => setSidebarOpen(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 40,
+                  height: 40,
+                  transition: 'all 0.2s',
+                }}
+              />
+            </Badge>
+          </div>
         </Header>
 
         <Content
@@ -255,6 +249,8 @@ export default function AdminLayout() {
           <Outlet />
         </Content>
       </Layout>
+
+      <NotificationSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
     </Layout>
   );
 }

@@ -25,6 +25,12 @@ export const inventoryApi = {
       `${baseUrl}/product/${productId}/history`
     ),
 
+  recentHistory: (limit?: number) =>
+    http.get<InventoryHistoryDto[]>(
+      `${baseUrl}/history/recent`,
+      { params: { limit } }
+    ),
+
   adjust: (payload: InventoryAdjustRequest) =>
     http.post(`${baseUrl}/adjust`, payload),
 

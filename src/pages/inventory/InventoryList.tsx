@@ -7,6 +7,7 @@ import {
   Tooltip,
 } from "antd";
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   SearchOutlined,
   PlusOutlined,
@@ -17,6 +18,8 @@ import {
 import { inventoryApi } from "../../api/inventory.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { locationApi } from "../../api/location.api";
+import { productApi } from "../../api/product.api";
+import { unitApi } from "../../api/unit.api";
 
 import InventoryAdjustForm from "./InventoryAdjustForm";
 import PageHeader from "../../components/PageHeader";
@@ -42,8 +45,14 @@ const LOCATION_TYPE_LABELS: Record<number, string> = {
 export default function InventoryList() {
   const [data, setData] = useState<InventoryDto[]>([]);
 
-  const [warehouseId, setWarehouseId] = useState<string>();
-  const [locationId, setLocationId] = useState<string>();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [warehouseId, setWarehouseId] = useState<string | undefined>(
+    searchParams.get("warehouseId") || undefined
+  );
+  const [locationId, setLocationId] = useState<string | undefined>(
+    searchParams.get("locationId") || undefined
+  );
 
   const [loading, setLoading] = useState(false);
 
@@ -71,8 +80,11 @@ export default function InventoryList() {
     { label: string; value: string }[]
   >([]);
 
+  const [products, setProducts] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+
   // =========================
-  // LOAD WAREHOUSE
+  // LOAD WAREHOUSE & INITIAL LOCATIONS
   // =========================
   useEffect(() => {
     warehouseApi.query(1, 10000).then((res) => {
@@ -83,6 +95,22 @@ export default function InventoryList() {
         }))
       );
     });
+    
+    // Nếu có warehouseId từ URL, load danh sách location cho nó
+    if (warehouseId) {
+      locationApi.list(warehouseId).then((res) => {
+        setLocations(
+          res.data.map((l: any) => ({
+            label: l.code,
+            value: l.id,
+          }))
+        );
+      });
+    }
+
+    // Load danh mục sản phẩm và đơn vị để ánh xạ ĐVT
+    productApi.getAll().then(res => setProducts(res.data || []));
+    unitApi.getAll().then(res => setUnits(res.data || []));
   }, []);
 
   // =========================
@@ -114,8 +142,14 @@ export default function InventoryList() {
   // =========================
   const handleWarehouseChange = async (id?: string) => {
     setWarehouseId(id);
-
     setLocationId(undefined);
+    
+    // Update URL
+    if (id) {
+        setSearchParams({ warehouseId: id });
+    } else {
+        setSearchParams({});
+    }
 
     if (!id) {
       setLocations([]);
@@ -199,7 +233,14 @@ export default function InventoryList() {
           style={{ width: 180 }}
           options={locations}
           value={locationId}
-          onChange={setLocationId}
+          onChange={(val) => {
+            setLocationId(val);
+            if (val) {
+                setSearchParams({ warehouseId: warehouseId!, locationId: val });
+            } else {
+                setSearchParams({ warehouseId: warehouseId! });
+            }
+          }}
           disabled={!warehouseId}
         />
 
@@ -251,6 +292,17 @@ export default function InventoryList() {
                 </Text>
               </div>
             ),
+          },
+
+          {
+            title: "ĐVT",
+            width: 100,
+            align: "center",
+            render: (_: any, record: InventoryDto) => {
+              const prod = products.find(p => p.id === record.productId);
+              const unit = units.find(u => u.id === prod?.unitId);
+              return <Tag color="default">{unit?.name || (prod ? `NO_UNIT_${prod.unitId}` : `NO_PROD_${record.productId}`)}</Tag>;
+            }
           },
 
           {

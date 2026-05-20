@@ -8,6 +8,7 @@ import type { WarehouseDto } from "../../types/warehouse";
 import type { Product } from "../../types/product";
 import type { InventoryAdjustRequest } from "../../types/inventory";
 
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -33,6 +34,7 @@ export default function InventoryAdjustForm({ open, onClose, onSuccess }: Props)
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
 
   // Load kho & sản phẩm khi mở form
   useEffect(() => {
@@ -72,6 +74,8 @@ export default function InventoryAdjustForm({ open, onClose, onSuccess }: Props)
     try {
       await inventoryApi.adjust(payload);
       message.success("Điều chỉnh tồn kho thành công");
+      
+
       onSuccess();
       form.resetFields();
     } catch (err: any) {

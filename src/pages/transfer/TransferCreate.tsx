@@ -37,6 +37,7 @@ interface ItemRowProps {
   products: any[];
   inventoryMap: Record<string, number>;
   locationQtyMap: Record<string, number>;
+  productQtyMap: Record<number, number>;
   onRemove: () => void;
   showLabel: boolean;
 }
@@ -50,11 +51,13 @@ function ItemRow({
   products,
   inventoryMap,
   locationQtyMap,
+  productQtyMap,
   onRemove,
   showLabel,
 }: ItemRowProps) {
-  const productId      = Form.useWatch(["items", name, "productId"],      form);
-  const fromLocationId = Form.useWatch(["items", name, "fromLocationId"], form);
+  const productId       = Form.useWatch(["items", name, "productId"],      form);
+  const fromLocationId  = Form.useWatch(["items", name, "fromLocationId"], form);
+  const fromWarehouseId = Form.useWatch("fromWarehouseId", form);
 
   const mapKey = `${String(fromLocationId)}-${String(productId)}`;
   const availableQty =
@@ -75,10 +78,35 @@ function ItemRow({
           name={[name, "productId"]}
           rules={[{ required: true, message: "Chọn sản phẩm" }]}
         >
-          <Select showSearch optionFilterProp="children" placeholder="Chọn sản phẩm">
-            {products.map((p) => (
-              <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>
-            ))}
+          <Select 
+            showSearch 
+            optionFilterProp="label" 
+            optionLabelProp="label"
+            placeholder="Chọn sản phẩm"
+            popupMatchSelectWidth={false}
+          >
+            {products
+              .filter(p => {
+                return !fromWarehouseId || (productQtyMap[p.id] ?? 0) > 0;
+              })
+              .map((p) => {
+                const qty = productQtyMap[p.id] ?? 0;
+                return (
+                  <Select.Option key={p.id} value={p.id} label={p.name}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                      <span>{p.code ? `${p.code} - ${p.name}` : p.name}</span>
+                      {fromWarehouseId && (
+                        <Tag
+                          color={qty > 0 ? "blue" : "default"}
+                          style={{ margin: 0, flexShrink: 0 }}
+                        >
+                          {qty > 0 ? `Tồn: ${qty}` : "Trống"}
+                        </Tag>
+                      )}
+                    </div>
+                  </Select.Option>
+                );
+              })}
           </Select>
         </Form.Item>
       </Col>
@@ -226,6 +254,7 @@ export default function TransferCreateForm({ onSuccess, onCancel }: Props) {
   const [toLocations,    setToLocations]    = useState<any[]>([]);
   const [inventoryMap,   setInventoryMap]   = useState<Record<string, number>>({});
   const [locationQtyMap, setLocationQtyMap] = useState<Record<string, number>>({});
+  const [productQtyMap,  setProductQtyMap]  = useState<Record<number, number>>({});
 
   useEffect(() => {
     warehouseApi.query(1, 100).then((res) => setWarehouses(res.data.items || res.data));
@@ -242,22 +271,27 @@ export default function TransferCreateForm({ onSuccess, onCancel }: Props) {
 
     const map:    Record<string, number> = {};
     const locMap: Record<string, number> = {};
+    const prodMap: Record<number, number> = {};
 
     (invRes.data || []).forEach((inv: any) => {
       const available = (inv.onHandQuantity ?? 0) - (inv.lockedQuantity ?? 0);
-      const key = `${String(inv.locationId)}-${String(inv.productId)}`;
-      map[key] = available;
-      locMap[String(inv.locationId)] =
-        (locMap[String(inv.locationId)] || 0) + available;
+      if (available > 0) {
+        const key = `${String(inv.locationId)}-${String(inv.productId)}`;
+        map[key] = available;
+        
+        locMap[String(inv.locationId)] = (locMap[String(inv.locationId)] || 0) + available;
+        prodMap[inv.productId] = (prodMap[inv.productId] || 0) + available;
+      }
     });
 
     setInventoryMap(map);
     setLocationQtyMap(locMap);
+    setProductQtyMap(prodMap);
 
     form.setFieldsValue({
       items: form
         .getFieldValue("items")
-        ?.map((i: any) => ({ ...i, fromLocationId: undefined })),
+        ?.map((i: any) => ({ ...i, fromLocationId: undefined, toLocationId: undefined })),
     });
   };
 
@@ -298,6 +332,14 @@ export default function TransferCreateForm({ onSuccess, onCancel }: Props) {
     }
   };
 
+  const fromWarehouseIdVal = Form.useWatch("fromWarehouseId", form);
+  const selectedFromWarehouse = warehouses.find(w => w.id === fromWarehouseIdVal);
+
+  const filteredToWarehouses = warehouses.filter(w => {
+    if (!selectedFromWarehouse) return true;
+    return w.warehouseType === selectedFromWarehouse.warehouseType && w.id !== selectedFromWarehouse.id;
+  });
+
   return (
     <Form
       form={form}
@@ -312,7 +354,14 @@ export default function TransferCreateForm({ onSuccess, onCancel }: Props) {
             name="fromWarehouseId"
             rules={[{ required: true, message: "Chọn kho nguồn" }]}
           >
-            <Select onChange={onFromWarehouseChange} placeholder="Chọn kho nguồn">
+            <Select 
+              onChange={(val) => {
+                form.setFieldValue("toWarehouseId", undefined);
+                setToLocations([]);
+                onFromWarehouseChange(val);
+              }} 
+              placeholder="Chọn kho nguồn"
+            >
               {warehouses.map((w) => (
                 <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
               ))}
@@ -326,7 +375,7 @@ export default function TransferCreateForm({ onSuccess, onCancel }: Props) {
             rules={[{ required: true, message: "Chọn kho đích" }]}
           >
             <Select onChange={onToWarehouseChange} placeholder="Chọn kho đích">
-              {warehouses.map((w) => (
+              {filteredToWarehouses.map((w) => (
                 <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
               ))}
             </Select>
@@ -354,6 +403,7 @@ export default function TransferCreateForm({ onSuccess, onCancel }: Props) {
                 products={products}
                 inventoryMap={inventoryMap}
                 locationQtyMap={locationQtyMap}
+                productQtyMap={productQtyMap}
                 onRemove={() => remove(name)}
                 showLabel={name === 0}
               />
@@ -372,7 +422,7 @@ export default function TransferCreateForm({ onSuccess, onCancel }: Props) {
         <Space>
           <Button onClick={onCancel}>Hủy</Button>
           <Button type="primary" htmlType="submit" loading={loading}>
-            Lưu nháp
+            Xác nhận 
           </Button>
         </Space>
       </Row>

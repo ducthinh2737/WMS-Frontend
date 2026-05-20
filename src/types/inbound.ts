@@ -39,6 +39,8 @@ export interface GRByTypeParams {
 export interface InboundItemForm {
   productId: string;
   quantity: number;
+  unitId?: number;
+  price?: number;
 }
 
 export interface InboundOrderCreateRequest {
@@ -98,6 +100,8 @@ export interface ProductionReceiptItemDto {
   quantity: number;
   receipt_Qty: number;
   status: number;
+  unitId?: number;
+  unitName?: string;
   lotCode?: string;
   expiryDate?: string;
   manufacturingDate?: string;

@@ -38,4 +38,13 @@ export const productApi = {
 
     filter: (dto: ProductFilterDto) =>
         http.post<PaginatedResult<Product>>("/product/filter", dto),
+
+    getUoms: (id: number) =>
+        http.get<any[]>(`/product/${id}/uoms`),
+
+    addUom: (id: number, data: { unitId: number; factor: number }) =>
+        http.post(`/product/${id}/uoms`, data),
+
+    deleteUom: (id: number, uomId: number) =>
+        http.delete(`/product/${id}/uoms/${uomId}`),
 };

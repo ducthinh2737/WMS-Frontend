@@ -5,7 +5,10 @@ import {
   Tag,
   Popconfirm,
   message,
+  Input,
+  Select,
 } from "antd";
+import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { outboundApi } from "../../api/outbound.api";
 import GoodsIssueDetailModal from "./GoodsIssueDetailModal";
@@ -26,6 +29,7 @@ const GIStatus = {
 
   OutOfStock: 6,
   InsufficientStock: 7,
+  Picked: 8,
 } as const;
 
 // ===== STATUS MAP =====
@@ -39,11 +43,15 @@ const StatusMap: Record<number, { label: string; color: string }> = {
 
   6: { label: "Hết hàng", color: "volcano" },
   7: { label: "Không đủ hàng", color: "gold" },
+  8: { label: "Đã Pick đủ", color: "geekblue" },
 };
 
 export default function GoodsIssueList() {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [filterCode, setFilterCode] = useState("");
+  const [filterStatus, setFilterStatus] = useState<number | null>(null);
 
   const [selectedGIId, setSelectedGIId] =
     useState<string | null>(null);
@@ -87,9 +95,9 @@ export default function GoodsIssueList() {
         prev.map((x) =>
           x.id === id
             ? {
-                ...x,
-                status: GIStatus.Approved,
-              }
+              ...x,
+              status: GIStatus.Approved,
+            }
             : x
         )
       );
@@ -103,7 +111,7 @@ export default function GoodsIssueList() {
     } catch (err: any) {
       message.error(
         err?.response?.data?.message ||
-          "Approve thất bại"
+        "Approve thất bại"
       );
     }
   };
@@ -121,9 +129,9 @@ export default function GoodsIssueList() {
         prev.map((x) =>
           x.id === id
             ? {
-                ...x,
-                status,
-              }
+              ...x,
+              status,
+            }
             : x
         )
       );
@@ -136,7 +144,7 @@ export default function GoodsIssueList() {
     } catch (err: any) {
       message.error(
         err?.response?.data?.message ||
-          "Cập nhật trạng thái thất bại"
+        "Cập nhật trạng thái thất bại"
       );
     }
   };
@@ -169,19 +177,31 @@ export default function GoodsIssueList() {
     },
 
     {
-      title: "Ngày xuất",
-      dataIndex: "issuedAt",
-      render: (d: string | null) =>
-        d
-          ? new Date(d).toLocaleString("vi-VN")
-          : "-",
+      title: "Ngày tạo ",
+      dataIndex: "createdAt",
+      render: (d: string | null) => {
+        if (!d) return "-";
+        
+        let dateStr = d.replace(" ", "T");
+        if (!dateStr.endsWith("Z") && !dateStr.includes("+")) {
+          dateStr += "Z";
+        }
+        
+        return new Date(dateStr).toLocaleString("vi-VN", {
+          timeZone: "Asia/Ho_Chi_Minh",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
     },
 
     {
       title: "Hành động",
       render: (_: any, r: any) => {
         switch (r.status) {
-          // ===== PENDING =====
           case GIStatus.Pending:
             return (
               <Space wrap>
@@ -191,37 +211,20 @@ export default function GoodsIssueList() {
                   okText="Duyệt"
                   cancelText="Hủy"
                 >
-                  <Button
-                    type="primary"
-                    size="small"
-                  >
-                    Duyệt
-                  </Button>
+                  <Button type="primary" size="small">Duyệt</Button>
                 </Popconfirm>
 
-                <Button
-                  danger
-                  size="small"
-                  onClick={() =>
-                    updateStatus(
-                      r.id,
-                      GIStatus.OutOfStock
-                    )
-                  }
+                <Popconfirm
+                  title="Xác nhận từ chối phiếu xuất?"
+                  onConfirm={() => updateStatus(r.id, GIStatus.Rejected)}
+                  okText="Từ chối"
+                  cancelText="Hủy"
                 >
-                  Hết hàng
-                </Button>
+                  <Button danger size="small">Từ chối</Button>
+                </Popconfirm>
 
-                <Button
-                  size="small"
-                  onClick={() =>
-                    updateStatus(
-                      r.id,
-                      GIStatus.InsufficientStock
-                    )
-                  }
-                >
-                  Không đủ hàng
+                <Button size="small" icon={<EyeOutlined />} onClick={() => openDetailModal(r)}>
+                  Chi tiết
                 </Button>
               </Space>
             );
@@ -230,6 +233,7 @@ export default function GoodsIssueList() {
           case GIStatus.Approved:
           case GIStatus.Partial:
           case GIStatus.Picking:
+          case GIStatus.Picked:
             return (
               <Button
                 type="primary"
@@ -245,33 +249,37 @@ export default function GoodsIssueList() {
           // ===== COMPLETE =====
           case GIStatus.Completed:
             return (
-              <Tag color="green">
-                Hoàn thành
-              </Tag>
+              <Space wrap>
+
+                <Button size="small" icon={<EyeOutlined />} onClick={() => openDetailModal(r)}>Chi tiết</Button>
+              </Space>
             );
 
           // ===== OUT OF STOCK =====
           case GIStatus.OutOfStock:
             return (
-              <Tag color="volcano">
-                Hết hàng
-              </Tag>
+              <Space wrap>
+                <Tag color="volcano">Hết hàng</Tag>
+                <Button size="small" icon={<EyeOutlined />} onClick={() => openDetailModal(r)}>Chi tiết</Button>
+              </Space>
             );
 
           // ===== INSUFFICIENT =====
           case GIStatus.InsufficientStock:
             return (
-              <Tag color="gold">
-                Không đủ hàng
-              </Tag>
+              <Space wrap>
+                <Tag color="gold">Không đủ hàng</Tag>
+                <Button size="small" icon={<EyeOutlined />} onClick={() => openDetailModal(r)}>Chi tiết</Button>
+              </Space>
             );
 
           // ===== REJECT =====
           case GIStatus.Rejected:
             return (
-              <Tag color="red">
-                Đã từ chối
-              </Tag>
+              <Space wrap>
+                <Tag color="red">Đã từ chối</Tag>
+                <Button size="small" icon={<EyeOutlined />} onClick={() => openDetailModal(r)}>Chi tiết</Button>
+              </Space>
             );
 
           // ===== DEFAULT =====
@@ -291,23 +299,64 @@ export default function GoodsIssueList() {
     },
   ];
 
+  const filteredList = list.filter((gi) => {
+    let match = true;
+    if (filterCode && !gi.code.toLowerCase().includes(filterCode.toLowerCase())) match = false;
+    if (filterStatus !== null && gi.status !== filterStatus) match = false;
+    return match;
+  }).sort((a, b) => {
+    const dateA = a.createdAt || a.issuedAt;
+    const dateB = b.createdAt || b.issuedAt;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
+
   return (
     <div>
       {/* ===== ACTIONS ===== */}
-      <Space style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+        <h2>Phiếu xuất</h2>
         <Button
           type="primary"
           onClick={() => setOpenCreate(true)}
         >
           Tạo GI sản xuất
         </Button>
-      </Space>
+      </div>
+
+      {/* FILTER SECTION */}
+      <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+        <Input
+          placeholder="Tìm theo mã phiếu xuất..."
+          value={filterCode}
+          onChange={(e) => setFilterCode(e.target.value)}
+          style={{ width: 250 }}
+          prefix={<SearchOutlined />}
+          allowClear
+        />
+        <Select
+          placeholder="Trạng thái"
+          value={filterStatus}
+          onChange={setFilterStatus}
+          style={{ width: 180 }}
+          allowClear
+        >
+          <Select.Option value={0}>Chờ xử lý</Select.Option>
+          <Select.Option value={1}>Đã duyệt</Select.Option>
+          <Select.Option value={2}>Xuất một phần</Select.Option>
+          <Select.Option value={3}>Hoàn thành</Select.Option>
+          <Select.Option value={4}>Từ chối</Select.Option>
+          <Select.Option value={5}>Đang picking</Select.Option>
+          <Select.Option value={6}>Hết hàng</Select.Option>
+          <Select.Option value={7}>Không đủ hàng</Select.Option>
+          <Select.Option value={8}>Đã Pick đủ</Select.Option>
+        </Select>
+      </div>
 
       {/* ===== TABLE ===== */}
       <Table
         rowKey="id"
         loading={loading}
-        dataSource={list}
+        dataSource={filteredList}
         columns={columns}
         pagination={{
           pageSize: 10,

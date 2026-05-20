@@ -13,6 +13,9 @@ import type { GoodsReceiptDto } from "../../types/inbound";
 
 import ProductionGRCountingModal from "./ProductionGRCountingModal";
 import CreateProductionGRModal from "./CreateProductionGRModal";
+import GRDetailModal from "./GRDetailModal";
+import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
+import { Input, Select } from "antd";
 
 // ================= ENUM =================
 const GRStatus = {
@@ -45,6 +48,11 @@ export default function GoodsReceiptList() {
   const [selectedGR, setSelectedGR] = useState<GoodsReceiptDto | null>(null);
   const [openCounting, setOpenCounting] = useState(false);
   const [openCreateProduction, setOpenCreateProduction] = useState(false);
+  const [openDetail, setOpenDetail] = useState(false);
+
+  // Filters
+  const [filterCode, setFilterCode] = useState("");
+  const [filterStatus, setFilterStatus] = useState<number | null>(null);
 
   useEffect(() => { fetchGRs(); }, []);
 
@@ -114,7 +122,21 @@ export default function GoodsReceiptList() {
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
-      render: (d: string) => new Date(d).toLocaleString("vi-VN"),
+      render: (d: string | null) => {
+        if (!d) return "-";
+        let dateStr = d.replace(" ", "T");
+        if (!dateStr.endsWith("Z") && !dateStr.includes("+")) {
+          dateStr += "Z";
+        }
+        return new Date(dateStr).toLocaleString("vi-VN", {
+          timeZone: "Asia/Ho_Chi_Minh",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      },
     },
     {
       title: "Hành động",
@@ -134,54 +156,68 @@ export default function GoodsReceiptList() {
                   <Button type="primary" size="small">Duyệt</Button>
                 </Popconfirm>
 
-                {/* ← 2 nút mới, giống module xuất */}
                 <Popconfirm
-                  title="Xác nhận đánh dấu hết hàng?"
-                  onConfirm={() => updateGRStatus(record.id, GRStatus.OutOfStock)}
-                  okText="Xác nhận"
+                  title="Xác nhận từ chối phiếu nhập?"
+                  onConfirm={() => updateGRStatus(record.id, GRStatus.Rejected)}
+                  okText="Từ chối"
                   cancelText="Hủy"
                 >
-                  <Button danger size="small">Hết hàng</Button>
+                  <Button danger size="small">Từ chối</Button>
                 </Popconfirm>
 
-                <Popconfirm
-                  title="Xác nhận đánh dấu không đủ hàng?"
-                  onConfirm={() => updateGRStatus(record.id, GRStatus.InsufficientStock)}
-                  okText="Xác nhận"
-                  cancelText="Hủy"
+                <Button
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() => { setSelectedGR(record); setOpenDetail(true); }}
                 >
-                  <Button size="small">Không đủ hàng</Button>
-                </Popconfirm>
+                  Chi tiết
+                </Button>
               </Space>
             );
 
           case GRStatus.Approved:
           case GRStatus.Partial:
             return (
-              <Button
-                type="primary"
-                size="small"
-                onClick={() => handleOpenCounting(record)}
-              >
-                Kiểm hàng
-              </Button>
+              <Space wrap>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => handleOpenCounting(record)}
+                >
+                  Kiểm hàng
+                </Button>
+                <Button
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() => { setSelectedGR(record); setOpenDetail(true); }}
+                >
+                  Chi tiết
+                </Button>
+              </Space>
             );
 
-          case GRStatus.Completed:
-            return <Tag color="green">Hoàn thành</Tag>;
-
-          case GRStatus.OutOfStock:
-            return <Tag color="volcano">Hết hàng</Tag>;
-
-          case GRStatus.InsufficientStock:
-            return <Tag color="gold">Không đủ hàng</Tag>;
 
           default:
-            return null;
+            return (
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => { setSelectedGR(record); setOpenDetail(true); }}
+              >
+                Chi tiết
+              </Button>
+            );
         }
       },
     },
   ];
+
+  const filteredGRs = grList.filter(gr => {
+    let match = true;
+    if (filterCode && !gr.code.toLowerCase().includes(filterCode.toLowerCase())) match = false;
+    if (filterStatus !== null && gr.status !== filterStatus) match = false;
+    return match;
+  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div>
@@ -192,8 +228,36 @@ export default function GoodsReceiptList() {
         </Button>
       </div>
 
+      {/* FILTER SECTION */}
+      <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+        <Input
+          placeholder="Tìm theo mã phiếu nhập..."
+          value={filterCode}
+          onChange={(e) => setFilterCode(e.target.value)}
+          style={{ width: 250 }}
+          prefix={<SearchOutlined />}
+          allowClear
+        />
+        <Select
+          placeholder="Trạng thái"
+          allowClear
+          style={{ width: 200 }}
+          value={filterStatus}
+          onChange={setFilterStatus}
+          options={[
+            { value: GRStatus.Pending, label: "Chờ xử lý" },
+            { value: GRStatus.Approved, label: "Đã duyệt" },
+            { value: GRStatus.Partial, label: "Nhận một phần" },
+            { value: GRStatus.Completed, label: "Hoàn thành" },
+            { value: GRStatus.Rejected, label: "Từ chối" },
+            { value: GRStatus.OutOfStock, label: "Hết hàng" },
+            { value: GRStatus.InsufficientStock, label: "Không đủ hàng" },
+          ]}
+        />
+      </div>
+
       <Table
-        dataSource={grList}
+        dataSource={filteredGRs}
         columns={columns}
         loading={loading}
         rowKey="id"
@@ -213,6 +277,12 @@ export default function GoodsReceiptList() {
         open={openCreateProduction}
         onCancel={() => setOpenCreateProduction(false)}
         onSuccess={() => { setOpenCreateProduction(false); fetchGRs(); }}
+      />
+
+      <GRDetailModal
+        open={openDetail}
+        gr={selectedGR}
+        onCancel={() => { setOpenDetail(false); setSelectedGR(null); }}
       />
     </div>
   );

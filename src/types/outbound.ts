@@ -64,6 +64,8 @@ export interface GoodsIssueDetailDto {
   warehouseName: string;
   status: number;
   note?: string;
+  customerName?: string;
+  address?: string;
   items: GoodsIssueItemDtoForFrontend[];
 }
 
@@ -78,10 +80,13 @@ export interface OutboundOrderDto {
 }
 
 export interface OutboundOrderItemDto {
-  id: string;
+  id?: string;
   productId: number;
-  quantity: number;
+  quantity?: number;
+  orderQty?: number;
   price: number;
+  warehouseId?: string;
+  unitId?: number;
 }
 
 export interface OutboundOrderQueryDto {
@@ -108,5 +113,7 @@ export interface GoodsIssueQuery1Dto {
 
 export interface ProductionGoodsIssueCreateDto {
   warehouseId: string;
+  customerId?: number;
+  address?: string;
   items: { productId: number; quantity: number }[];
 }

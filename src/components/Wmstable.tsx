@@ -6,33 +6,29 @@ import { useState } from "react";
 export default function WmsTable(props: any) {
   const { columns, ...rest } = props;
 
-  const [cols, setCols] = useState(
-    columns.map((col: any) => ({
-      ...col,
-      width: col.width || 120,
-    }))
-  );
+  const [widths, setWidths] = useState<Record<string, number>>({});
 
   const handleResize =
-    (index: number) =>
+    (key: string) =>
     (_: any, { size }: any) => {
-      setCols((prev: any[]) => {
-        const next = [...prev];
-        next[index] = {
-          ...next[index],
-          width: size.width,
-        };
-        return next;
-      });
+      setWidths((prev) => ({
+        ...prev,
+        [key]: size.width,
+      }));
     };
 
-  const mergedColumns = cols.map((col: any, index: number) => ({
-    ...col,
-    onHeaderCell: (column: any) => ({
-      width: column.width,
-      onResize: handleResize(index),
-    }),
-  }));
+  const mergedColumns = columns.map((col: any, index: number) => {
+    const key = col.key || col.dataIndex || String(index);
+    const width = widths[key] || col.width || 120;
+    return {
+      ...col,
+      width,
+      onHeaderCell: (column: any) => ({
+        width,
+        onResize: handleResize(key),
+      }),
+    };
+  });
 
   return (
     <Table

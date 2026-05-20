@@ -35,6 +35,7 @@ const giaStatusMap: Record<number, { label: string; color: string }> = {
   1: { label: "Picking", color: "processing" },
   2: { label: "Picked", color: "success" },
   3: { label: "Cancelled", color: "error" },
+  4: { label: "Complete", color: "blue" },
 };
 
 const statusMap: Record<number, { label: string; color: string }> = {
@@ -43,6 +44,7 @@ const statusMap: Record<number, { label: string; color: string }> = {
   2: { label: "Partially Issued", color: "orange" },
   3: { label: "Complete", color: "blue" },
   5: { label: "Picking", color: "purple" },
+  8: { label: "Picked", color: "success" },
 };
 
 interface Props {
@@ -106,7 +108,7 @@ export default function GoodsIssueDetailModal({
       .some((a) => (tempPicked[a.id] ?? 0) > 0);  // có qty mới nhập
 
   const canIssue = (item: GoodsIssueItemDtoForFrontend) =>
-    item.status >= 2 &&
+    (item.status === 2 || item.status === 5 || item.status === 8) &&
     item.pickedQty > item.issuedQty &&
     item.quantity - item.issuedQty > 0;
 
@@ -139,6 +141,13 @@ export default function GoodsIssueDetailModal({
       return;
     }
 
+    // Prevent double counting / over picking on frontend
+    const newPickedSum = items.reduce((sum, x) => sum + x.pickedQty, 0);
+    if (item.pickedQty + newPickedSum > item.quantity) {
+      message.warning(`Tổng số lượng pick (${item.pickedQty + newPickedSum}) vượt quá yêu cầu (${item.quantity})`);
+      return;
+    }
+
     try {
       setActionLoading((p) => ({ ...p, [item.id]: true }));
       await outboundApi.picking({
@@ -148,6 +157,7 @@ export default function GoodsIssueDetailModal({
         allocations: items,
       });
       message.success("Picking thành công");
+      setTempPicked({}); // Explicitly reset tempPicked to clear the inputs
       await loadDetail(true);
       onActionSuccess?.();
     } catch (err: any) {
@@ -264,6 +274,12 @@ export default function GoodsIssueDetailModal({
                   {statusMap[detail.status]?.label || "Không xác định"}
                 </Tag>
               </Descriptions.Item>
+              {detail.customerName && (
+                <Descriptions.Item label="Khách hàng">{detail.customerName}</Descriptions.Item>
+              )}
+              {detail.address && (
+                <Descriptions.Item label="Địa chỉ">{detail.address}</Descriptions.Item>
+              )}
               <Descriptions.Item label="Tiến độ" span={3}>
                 <Progress percent={Math.round(overallProgress)} status="active" />
               </Descriptions.Item>
@@ -338,7 +354,7 @@ export default function GoodsIssueDetailModal({
                   min={0}
                   max={a.allocatedQty - a.pickedQty}
                   value={tempPicked[a.id] ?? 0}
-                  disabled={a.allocatedQty - a.issuedQty <= 0 || isInvalidLocation(a) || a.allocatedQty - a.pickedQty <= 0}
+                  disabled={a.allocatedQty - a.pickedQty <= 0 || isInvalidLocation(a)}
                   onChange={(v) =>
                     setTempPicked((p) => ({ ...p, [a.id]: Number(v) || 0 }))
                   }

@@ -17,6 +17,8 @@ import { useEffect, useState } from "react";
 import { inboundApi } from "../../api/inbound.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { productApi } from "../../api/product.api";
+import { unitApi } from "../../api/unit.api";
+import { supplierApi } from "../../api/supplier.api";
 
 interface Props {
   open: boolean;
@@ -34,6 +36,9 @@ export default function CreateProductionGRModal({
 
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [productUomsMap, setProductUomsMap] = useState<Record<number, any[]>>({});
 
   // ================= LOAD DATA =================
   useEffect(() => {
@@ -44,16 +49,24 @@ export default function CreateProductionGRModal({
 
     const fetchData = async () => {
       try {
-        const [whRes, prodRes] = await Promise.all([
+        const [whRes, prodRes, unitRes, suppRes] = await Promise.all([
           // ✅ GET ALL WAREHOUSES (FIX HERE)
           warehouseApi.query(1, 1000),
 
           // PRODUCTS
           productApi.getAll(),
+
+          // UNITS
+          unitApi.getAll(),
+
+          // SUPPLIERS
+          supplierApi.getAll(),
         ]);
 
         setWarehouses(whRes.data.items || []);
         setProducts(prodRes.data || []);
+        setUnits(unitRes.data || []);
+        setSuppliers(suppRes.data || []);
       } catch {
         message.error("Không thể tải dữ liệu danh mục");
       }
@@ -72,6 +85,26 @@ export default function CreateProductionGRModal({
         return;
       }
 
+      // Check missing unitId or unconfigured ProductUoms
+      for (const item of values.items) {
+        if (!item.unitId || item.unitId <= 0) {
+          message.error("Vui lòng chọn đầy đủ đơn vị tính cho tất cả sản phẩm.");
+          return;
+        }
+
+        const uoms = productUomsMap[item.productId];
+        if (uoms === undefined) {
+          message.error("Đang tải thông tin đơn vị tính cho sản phẩm, vui lòng đợi...");
+          return;
+        }
+        if (!uoms || uoms.length === 0) {
+          const prod = products.find(p => p.id === item.productId);
+          const prodName = prod ? prod.name : `ID: ${item.productId}`;
+          message.error(`Sản phẩm '${prodName}' chưa được thiết lập Đơn vị tính (ProductUom) trong dữ liệu danh mục!`);
+          return;
+        }
+      }
+
       setLoading(true);
 
       const payload = {
@@ -81,6 +114,7 @@ export default function CreateProductionGRModal({
         productionReceiptItems: values.items.map((i: any) => ({
           productId: i.productId,
           quantity: i.quantity,
+          unitId: i.unitId,
           lotCode: "",
           status: 1,
         })),
@@ -134,6 +168,29 @@ export default function CreateProductionGRModal({
       destroyOnHidden
     >
       <Form form={form} layout="vertical">
+        {/* ================= SUPPLIER ================= */}
+        <Form.Item
+          name="supplierId"
+          label="Nhà cung cấp"
+        >
+          <Select
+            placeholder="Chọn nhà cung cấp (tùy chọn)"
+            allowClear
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              (option?.children as unknown as string)
+                ?.toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          >
+            {suppliers.map((s) => (
+              <Select.Option key={s.id} value={s.id}>
+                {s.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
 
         {/* ================= WAREHOUSE ================= */}
         <Form.Item
@@ -161,6 +218,7 @@ export default function CreateProductionGRModal({
           </Select>
         </Form.Item>
 
+
         <Divider>Chi tiết sản phẩm</Divider>
 
         {/* ================= ITEMS ================= */}
@@ -175,7 +233,7 @@ export default function CreateProductionGRModal({
                   style={{ marginBottom: 12 }}
                 >
                   {/* PRODUCT */}
-                  <Col span={14}>
+                  <Col span={10}>
                     <Form.Item
                       {...restField}
                       name={[name, "productId"]}
@@ -192,6 +250,25 @@ export default function CreateProductionGRModal({
                             ?.toLowerCase()
                             .includes(input.toLowerCase())
                         }
+                        onChange={(val) => {
+                          form.setFieldValue(["items", name, "unitId"], undefined);
+                          const defaultUnit = products.find(p => p.id === val)?.unitId;
+                          const currentProductId = val;
+
+                          if (!productUomsMap[currentProductId]) {
+                            productApi.getUoms(currentProductId).then(res => {
+                              setProductUomsMap(prev => ({ ...prev, [currentProductId]: res.data }));
+                              const latestProductId = form.getFieldValue(["items", name, "productId"]);
+                              if (latestProductId === currentProductId) {
+                                form.setFieldValue(["items", name, "unitId"], defaultUnit);
+                              }
+                            }).catch(() => {
+                              setProductUomsMap(prev => ({ ...prev, [currentProductId]: [] }));
+                            });
+                          } else {
+                            form.setFieldValue(["items", name, "unitId"], defaultUnit);
+                          }
+                        }}
                       >
                         {filteredProducts.map((p) => (
                           <Select.Option key={p.id} value={p.id}>
@@ -203,7 +280,7 @@ export default function CreateProductionGRModal({
                   </Col>
 
                   {/* QUANTITY */}
-                  <Col span={8}>
+                  <Col span={6}>
                     <Form.Item
                       {...restField}
                       name={[name, "quantity"]}
@@ -222,6 +299,50 @@ export default function CreateProductionGRModal({
                         precision={0}
                         style={{ width: "100%" }}
                       />
+                    </Form.Item>
+                  </Col>
+
+                  {/* UNIT */}
+                  <Col span={6}>
+                    <Form.Item
+                      shouldUpdate={(prevValues, currentValues) => {
+                        return prevValues.items?.[name]?.productId !== currentValues.items?.[name]?.productId;
+                      }}
+                      noStyle
+                    >
+                      {() => {
+                        const productId = form.getFieldValue(["items", name, "productId"]);
+                        const defaultUnitId = products.find(p => p.id === productId)?.unitId;
+                        const uoms = productUomsMap[productId] || [];
+
+                        return (
+                          <Form.Item
+                            {...restField}
+                            name={[name, "unitId"]}
+                            label="ĐVT"
+                            rules={[{ required: true, message: "Chọn ĐVT" }]}
+                          >
+                            <Select placeholder="ĐVT">
+                              {uoms.length > 0 ? (
+                                uoms.map((u: any) => {
+                                  const unitName = units.find(un => un.id === u.unitId)?.name || u.unitName || u.unitId;
+                                  return (
+                                    <Select.Option key={u.unitId} value={u.unitId}>
+                                      {unitName}
+                                    </Select.Option>
+                                  );
+                                })
+                              ) : (
+                                defaultUnitId && (
+                                  <Select.Option value={defaultUnitId}>
+                                    {units.find(u => u.id === defaultUnitId)?.name || defaultUnitId}
+                                  </Select.Option>
+                                )
+                              )}
+                            </Select>
+                          </Form.Item>
+                        );
+                      }}
                     </Form.Item>
                   </Col>
 

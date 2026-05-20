@@ -7,7 +7,7 @@ export const outboundApi = {
   // ── OUTBOUND ORDER ──────────────────────────────────────────────
   getOrder:    (id: string) => http.get<OutboundOrderDto>(`${baseUrl}/order/${id}`),
   getOrders:   (params?: OutboundOrderQueryDto) => http.get<OutboundOrderDto[]>(`${baseUrl}/order`, { params }),
-  createOrder: (payload: OutboundOrderDto) => http.post(`${baseUrl}/order`, payload),
+  createOrder: (payload: any) => http.post(`${baseUrl}/order`, payload),
   approveOrder:(id: string) => http.post(`${baseUrl}/order/${id}/approve`),
   rejectOrder: (id: string) => http.post(`${baseUrl}/order/${id}/reject`),
 

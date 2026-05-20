@@ -110,6 +110,7 @@ export default function GoodsIssueCreate() {
           productId: i.productId,
           locationId: values[`location_${i.productId}`],
           quantity: values[`qty_${i.productId}`],
+          unitId: i.unitId, // KHẮC PHỤC: Thêm thuộc tính này vào!
         })),
       };
       await goodsIssueApi.create(payload);
@@ -146,8 +147,8 @@ export default function GoodsIssueCreate() {
           dataSource={items}
           bordered
           columns={[
-            { 
-              title: "Sản phẩm", 
+            {
+              title: "Sản phẩm",
               key: "productName",
               render: (_, record) => {
                 const totalInventory = (locationInventoryMap[record.productId] || []).reduce((sum, loc) => sum + loc.qty, 0);
@@ -165,7 +166,18 @@ export default function GoodsIssueCreate() {
                 );
               }
             },
-            { title: "SL Đơn hàng", dataIndex: "quantity", key: "quantity", align: "center" },
+            {
+              title: "SL Đơn hàng",
+              dataIndex: "quantity",
+              key: "quantity",
+              align: "center",
+              render: (qty, record) => (
+                <Space>
+                  {qty}
+                  <Text type="secondary">{record.unitName || '-'}</Text>
+                </Space>
+              )
+            },
             {
               title: "Vị trí lấy hàng (Location)",
               key: "location",
@@ -205,7 +217,9 @@ export default function GoodsIssueCreate() {
               width: 150,
               render: (_, record) => {
                 const selectedLocId = form.getFieldValue(`location_${record.productId}`);
-                const maxQty = locationInventoryMap[record.productId]?.find(l => l.locationId === selectedLocId)?.qty ?? 0;
+                const baseInvQty = locationInventoryMap[record.productId]?.find(l => l.locationId === selectedLocId)?.qty ?? 0;
+                const factor = record.conversionRate || 1; // Bạn cần lấy tỷ lệ quy đổi từ Backend truyền ra
+                const maxQtyUOM = Math.floor(baseInvQty / factor);
                 return (
                   <Form.Item
                     name={`qty_${record.productId}`}
@@ -213,7 +227,12 @@ export default function GoodsIssueCreate() {
                     initialValue={record.quantity}
                     rules={[{ required: true, message: "Nhập SL" }]}
                   >
-                    <InputNumber min={1} max={maxQty} style={{ width: "100%" }} />
+                    <InputNumber
+                      min={1}
+                      max={maxQtyUOM}
+                      style={{ width: "100%" }}
+                      addonAfter={record.unitName || '-'}
+                    />
                   </Form.Item>
                 );
               }

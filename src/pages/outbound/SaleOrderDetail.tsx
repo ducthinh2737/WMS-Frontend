@@ -76,7 +76,7 @@ export default function SalesOrderDetailModal({
     try {
       setLoading(true);
       const res = await outboundApi.getOrder(soId);
-      setData(res.data);
+      setData(res.data as any);
     } catch (err) {
       message.error("Không thể tải thông tin đơn hàng");
       console.error(err);

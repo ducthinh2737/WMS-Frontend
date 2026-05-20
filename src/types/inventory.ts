@@ -42,9 +42,17 @@ export interface LocationQtyDto {
 export interface InventoryHistoryDto {
     id: string;
     warehouseId: string;
+    warehouseName?: string;
     locationId: string;
+    locationCode?: string;
     productId: number;
+    productName?: string;
+    productCode?: string;
+    lotId?: string;
+    lotCode?: string;
     quantityChange: number;
+    beforeQty?: number;
+    afterQty?: number;
     actionType: InventoryActionType | string;  // enum hoặc string
     referenceCode?: string;
     note?: string;

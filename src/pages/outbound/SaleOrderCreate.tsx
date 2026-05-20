@@ -18,6 +18,7 @@ import { customerApi } from "../../api/customer.api";
 import { inventoryApi } from "../../api/inventory.api";
 import { warehouseApi } from "../../api/warehouse.api";
 import { productApi } from "../../api/product.api";
+import { unitApi } from "../../api/unit.api";
 
 const { Title } = Typography;
 
@@ -28,6 +29,7 @@ export interface SOItem {
   orderQty: number;
   price: number;
   warehouseId: string;
+  unitId?: number;
 }
 
 interface Inventory {
@@ -47,17 +49,20 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
   const [form] = Form.useForm();
 
   const [customers, setCustomers] = useState<{ id: number; name: string }[]>([]);
-  const [products, setProducts] = useState<{ id: number; name: string }[]>([]);
+  const [products, setProducts] = useState<{ id: number; name: string; unitId?: number }[]>([]);
   const [items, setItems] = useState<SOItem[]>([]);
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [warehouseMap, setWarehouseMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [units, setUnits] = useState<any[]>([]);
+  const [productUomsMap, setProductUomsMap] = useState<Record<number, any[]>>({});
 
   /* ========= LOAD ========= */
   useEffect(() => {
     loadCustomers();
     loadProductsAndInventory();
     loadWarehouses();
+    unitApi.getAll().then(res => setUnits(res.data || []));
   }, []);
 
   const loadCustomers = async () => {
@@ -78,6 +83,7 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
         productList.map((p: any) => ({
           id: p.id,
           name: p.name,
+          unitId: p.unitId,
         }))
       );
 
@@ -126,6 +132,16 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
     const p = products.find((x) => x.id === productId);
     if (!p) return;
 
+    // Tải danh sách đơn vị tính quy đổi của sản phẩm
+    const currentProductId = productId;
+    if (!productUomsMap[currentProductId]) {
+      productApi.getUoms(currentProductId).then(res => {
+        setProductUomsMap(prev => ({ ...prev, [currentProductId]: res.data }));
+      }).catch(() => {
+        setProductUomsMap(prev => ({ ...prev, [currentProductId]: [] }));
+      });
+    }
+
     setItems((prev) => [
       ...prev,
       {
@@ -134,6 +150,7 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
         orderQty: 1,
         price: 0,
         warehouseId: "",
+        unitId: p.unitId,
       },
     ]);
   };
@@ -159,6 +176,41 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
       title: "Sản phẩm",
       dataIndex: "productName",
       width: 220,
+    },
+    {
+      title: "ĐVT",
+      width: 110,
+      render: (_, record) => {
+        const uoms = productUomsMap[record.productId] || [];
+        const prod = products.find(p => p.id === record.productId);
+        const defaultUnitId = prod?.unitId;
+
+        return (
+          <Select
+            style={{ width: "100%" }}
+            placeholder="ĐVT"
+            value={record.unitId || defaultUnitId}
+            onChange={(val) => updateItem(record.productId, { unitId: val })}
+          >
+            {uoms.length > 0 ? (
+              uoms.map((u: any) => {
+                const unitName = units.find(un => un.id === u.unitId)?.name || u.unitId;
+                return (
+                  <Select.Option key={u.unitId} value={u.unitId}>
+                    {unitName}
+                  </Select.Option>
+                );
+              })
+            ) : (
+              defaultUnitId && (
+                <Select.Option value={defaultUnitId}>
+                  {units.find(u => u.id === defaultUnitId)?.name || "-"}
+                </Select.Option>
+              )
+            )}
+          </Select>
+        );
+      }
     },
     {
       title: "Kho xuất",
@@ -264,6 +316,23 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
         );
       }
 
+      // Check missing unitId or unconfigured ProductUoms
+      for (const item of items) {
+        if (!item.unitId || item.unitId <= 0) {
+          return message.error("Vui lòng chọn đầy đủ đơn vị tính cho tất cả sản phẩm.");
+        }
+
+        const uoms = productUomsMap[item.productId];
+        if (uoms === undefined) {
+          return message.error("Đang tải thông tin đơn vị tính cho sản phẩm, vui lòng đợi...");
+        }
+        if (!uoms || uoms.length === 0) {
+          const prod = products.find(p => p.id === item.productId);
+          const prodName = prod ? prod.name : `ID: ${item.productId}`;
+          return message.error(`Sản phẩm '${prodName}' chưa được thiết lập Đơn vị tính (ProductUom) trong dữ liệu danh mục!`);
+        }
+      }
+
       const over = items.find((i) => i.orderQty > getMaxQty(i));
       if (over) {
         return message.error(
@@ -280,6 +349,7 @@ export default function SaleOrderCreateForm({ onSuccess, onCancel }: Props) {
           warehouseId: i.warehouseId,
           orderQty: i.orderQty,
           price: i.price,
+          unitId: i.unitId,
         })),
       });
 
