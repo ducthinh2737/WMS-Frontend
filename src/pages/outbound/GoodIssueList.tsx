@@ -181,12 +181,12 @@ export default function GoodsIssueList() {
       dataIndex: "createdAt",
       render: (d: string | null) => {
         if (!d) return "-";
-        
+
         let dateStr = d.replace(" ", "T");
         if (!dateStr.endsWith("Z") && !dateStr.includes("+")) {
           dateStr += "Z";
         }
-        
+
         return new Date(dateStr).toLocaleString("vi-VN", {
           timeZone: "Asia/Ho_Chi_Minh",
           year: "numeric",
@@ -277,7 +277,7 @@ export default function GoodsIssueList() {
           case GIStatus.Rejected:
             return (
               <Space wrap>
-                <Tag color="red">Đã từ chối</Tag>
+
                 <Button size="small" icon={<EyeOutlined />} onClick={() => openDetailModal(r)}>Chi tiết</Button>
               </Space>
             );
@@ -319,7 +319,7 @@ export default function GoodsIssueList() {
           type="primary"
           onClick={() => setOpenCreate(true)}
         >
-          Tạo GI sản xuất
+          Tạo phiếu xuất
         </Button>
       </div>
 

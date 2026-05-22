@@ -158,11 +158,27 @@ export default function ProductionGRCountingModal({
                       <Form.Item
                         name={[name, "manufacturingDate"]}
                         label="Ngày sản xuất"
+                        dependencies={[[name, "expiryDate"]]}
+                        rules={[
+                          ({ getFieldValue }) => ({
+                            validator(_, value) {
+                              const expiryDate = getFieldValue(["items", name, "expiryDate"]);
+                              if (value && expiryDate && value.isAfter(expiryDate, 'day')) {
+                                return Promise.reject("Ngày sản xuất không được lớn hơn hạn sử dụng");
+                              }
+                              return Promise.resolve();
+                            },
+                          }),
+                        ]}
                       >
                         <DatePicker
                           style={{ width: "100%" }}
                           format="DD/MM/YYYY"
                           placeholder="Chọn ngày SX"
+                          disabledDate={(current) => {
+                            const expiryDate = form.getFieldValue(["items", name, "expiryDate"]);
+                            return !!(expiryDate && current && current.isAfter(expiryDate, 'day'));
+                          }}
                         />
                       </Form.Item>
                     </Col>
@@ -172,11 +188,27 @@ export default function ProductionGRCountingModal({
                       <Form.Item
                         name={[name, "expiryDate"]}
                         label="Hạn sử dụng"
+                        dependencies={[[name, "manufacturingDate"]]}
+                        rules={[
+                          ({ getFieldValue }) => ({
+                            validator(_, value) {
+                              const mfgDate = getFieldValue(["items", name, "manufacturingDate"]);
+                              if (value && mfgDate && value.isBefore(mfgDate, 'day')) {
+                                return Promise.reject("Hạn sử dụng không được nhỏ hơn ngày sản xuất");
+                              }
+                              return Promise.resolve();
+                            },
+                          }),
+                        ]}
                       >
                         <DatePicker
                           style={{ width: "100%" }}
                           format="DD/MM/YYYY"
                           placeholder="Chọn hạn dùng"
+                          disabledDate={(current) => {
+                            const mfgDate = form.getFieldValue(["items", name, "manufacturingDate"]);
+                            return !!(mfgDate && current && current.isBefore(mfgDate, 'day'));
+                          }}
                         />
                       </Form.Item>
                     </Col>

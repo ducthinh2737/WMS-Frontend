@@ -82,6 +82,11 @@ export default function GRCountingModal({
     for (const item of itemsToUpdate) {
       const lot = lotData[item.id];
 
+      if (lot?.manufacturingDate && lot?.expiryDate && dayjs(lot.manufacturingDate).isAfter(dayjs(lot.expiryDate), 'day')) {
+        message.error(`Sản phẩm "${item.productName || item.productId}" có ngày sản xuất lớn hơn hạn sử dụng.`);
+        throw new Error("Ngày sản xuất không được lớn hơn hạn sử dụng");
+      }
+
       const payload: ReceiveItemRequest = {
         id: item.id,
         productId: item.productId,
@@ -185,6 +190,10 @@ export default function GRCountingModal({
       render: (_: any, record: GoodsReceiptItemDto) => (
         <DatePicker
           style={{ width: "100%" }}
+          disabledDate={(current) => {
+            const exp = lotData[record.id]?.expiryDate;
+            return !!(exp && current && current.isAfter(dayjs(exp), 'day'));
+          }}
           onChange={(date) =>
             handleLotChange(
               record.id,
@@ -201,6 +210,10 @@ export default function GRCountingModal({
       render: (_: any, record: GoodsReceiptItemDto) => (
         <DatePicker
           style={{ width: "100%" }}
+          disabledDate={(current) => {
+            const mfg = lotData[record.id]?.manufacturingDate;
+            return !!(mfg && current && current.isBefore(dayjs(mfg), 'day'));
+          }}
           onChange={(date) =>
             handleLotChange(
               record.id,

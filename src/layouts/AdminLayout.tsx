@@ -153,12 +153,12 @@ export default function AdminLayout() {
 
 
 
-              // {
-              //   key: "stocktake",
-              //   icon: <ScanOutlined />,
-              //   label: <Link to="/stocktake">Stocktake List</Link>,
+              {
+                key: "stocktake",
+                icon: <ScanOutlined />,
+                label: <Link to="/stocktake">Stocktake List</Link>,
 
-              // },
+              },
 
               {
                 key: "roles",

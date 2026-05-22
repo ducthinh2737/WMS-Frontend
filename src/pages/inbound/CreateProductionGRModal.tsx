@@ -286,11 +286,11 @@ export default function CreateProductionGRModal({
                       name={[name, "quantity"]}
                       label="Số lượng"
                       rules={[
-                        { required: true },
+                        { required: true, message: "Vui lòng nhập số lượng" },
                         {
                           type: "number",
                           min: 1,
-                          message: "Phải lớn hơn 0",
+                          message: "Số lượng phải lớn hơn 0",
                         },
                       ]}
                     >

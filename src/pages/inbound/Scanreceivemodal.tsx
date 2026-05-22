@@ -277,6 +277,14 @@ export default function ScanReceiveModal({ open, onCancel, onSuccess }: Props) {
     const toUpdate = currentGR.items.filter(i => (counts[i.id] ?? 0) > 0);
     if (!toUpdate.length) return message.warning("Vui lòng nhập số lượng cho ít nhất 1 sản phẩm");
 
+    for (const item of toUpdate) {
+      const lot = lotData[item.id];
+      if (lot?.manufacturingDate && lot?.expiryDate && dayjs(lot.manufacturingDate).isAfter(dayjs(lot.expiryDate), 'day')) {
+        message.error(`Sản phẩm "${item.productName ?? `Sản phẩm #${item.productId}`}" có ngày sản xuất lớn hơn hạn sử dụng.`);
+        return;
+      }
+    }
+
     setSubmitLoading(true);
     try {
       for (const item of toUpdate) {
@@ -515,11 +523,19 @@ export default function ScanReceiveModal({ open, onCancel, onSuccess }: Props) {
                     <Col xs={12} sm={6}>
                       <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 4 }}>Ngày sản xuất</Text>
                       <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="Chọn ngày SX" disabled={isDone}
+                        disabledDate={current => {
+                          const exp = lotData[item.id]?.expiryDate;
+                          return !!(exp && current && current.isAfter(dayjs(exp), 'day'));
+                        }}
                         onChange={val => handleLotChange(item.id, "manufacturingDate", val ? dayjs(val).toISOString() : undefined)} />
                     </Col>
                     <Col xs={12} sm={6}>
                       <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 4 }}>Hạn sử dụng</Text>
                       <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="Chọn hạn dùng" disabled={isDone}
+                        disabledDate={current => {
+                          const mfg = lotData[item.id]?.manufacturingDate;
+                          return !!(mfg && current && current.isBefore(dayjs(mfg), 'day'));
+                        }}
                         onChange={val => handleLotChange(item.id, "expiryDate", val ? dayjs(val).toISOString() : undefined)} />
                     </Col>
                     <Col xs={24} sm={6}>

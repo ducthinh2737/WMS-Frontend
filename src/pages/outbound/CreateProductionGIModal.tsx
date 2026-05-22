@@ -171,13 +171,13 @@ export default function CreateProductionGIModal({
             },
           ]}
         >
-          <Select 
+          <Select
             placeholder="Chọn kho"
             onChange={(val) => {
               setWarehouseId(val);
               form.setFieldValue("items", [{}]);
               setInventoryMap({});
-              
+
               inventoryApi.query({ warehouseId: val }).then(res => {
                 const map: Record<number, number> = {};
                 (res.data || []).forEach((inv: any) => {
@@ -259,71 +259,93 @@ export default function CreateProductionGIModal({
                   {/* PRODUCT */}
                   <Col span={10}>
                     <Form.Item
-                      {...restField}
-                      name={[name, "productId"]}
-                      label="Sản phẩm"
-                      rules={[{ required: true, message: "Chọn sản phẩm" }]}
+                      noStyle
+                      shouldUpdate={(prevValues, currentValues) => {
+                        return prevValues.items?.[name]?.productId !== currentValues.items?.[name]?.productId;
+                      }}
                     >
-                      <Select
-                        placeholder={warehouseId ? "Chọn sản phẩm" : "Vui lòng chọn kho trước"}
-                        disabled={!warehouseId}
-                        showSearch
-                        optionFilterProp="label"
-                        optionLabelProp="label"
-                        onChange={(val) => {
-                          form.setFieldValue(["items", name, "unitId"], undefined);
-                          const defaultUnit = products.find(p => p.id === val)?.unitId;
-                          const currentProductId = val;
+                      {() => {
+                        const productId = form.getFieldValue(["items", name, "productId"]);
+                        const availableQty = inventoryMap[productId] ?? 0;
+                        return (
+                          <Form.Item
+                            {...restField}
+                            name={[name, "productId"]}
+                            label={
+                              <span>
+                                Sản phẩm{" "}
+                                {productId !== undefined && productId !== null && (
+                                  <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                                    (Tồn khả dụng: <Text strong type={availableQty > 0 ? "success" : "danger"}>{availableQty}</Text>)
+                                  </Text>
+                                )}
+                              </span>
+                            }
+                            rules={[{ required: true, message: "Chọn sản phẩm" }]}
+                          >
+                            <Select
+                              placeholder={warehouseId ? "Chọn sản phẩm" : "Vui lòng chọn kho trước"}
+                              disabled={!warehouseId}
+                              showSearch
+                              optionFilterProp="label"
+                              optionLabelProp="label"
+                              onChange={(val) => {
+                                form.setFieldValue(["items", name, "unitId"], undefined);
+                                const defaultUnit = products.find(p => p.id === val)?.unitId;
+                                const currentProductId = val;
 
-                          if (!productUomsMap[currentProductId]) {
-                            productApi.getUoms(currentProductId).then(res => {
-                              setProductUomsMap(prev => ({ ...prev, [currentProductId]: res.data }));
-                              const latestProductId = form.getFieldValue(["items", name, "productId"]);
-                              if (latestProductId === currentProductId) {
-                                form.setFieldValue(["items", name, "unitId"], defaultUnit);
-                              }
-                            }).catch(() => {
-                              setProductUomsMap(prev => ({ ...prev, [currentProductId]: [] }));
-                            });
-                          } else {
-                            form.setFieldValue(["items", name, "unitId"], defaultUnit);
-                          }
-                        }}
-                      >
-                        {selectedWarehouseType !== 1 && (
-                          <Select.OptGroup label="Nguyên vật liệu">
-                            {products
-                              .filter((p) => p.type === 0)
-                              .map((p) => (
-                                <Select.Option key={p.id} value={p.id} label={`${p.code} - ${p.name}`}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', padding: "4px 0" }}>
-                                    <span style={{ fontWeight: 500 }}>{p.code} - {p.name}</span>
-                                    <Text type="secondary" style={{ fontSize: 11 }}>
-                                      Tồn kho khả dụng: <Text strong type={inventoryMap[p.id] > 0 ? "success" : "danger"}>{inventoryMap[p.id] || 0}</Text>
-                                    </Text>
-                                  </div>
-                                </Select.Option>
-                              ))}
-                          </Select.OptGroup>
-                        )}
+                                if (!productUomsMap[currentProductId]) {
+                                  productApi.getUoms(currentProductId).then(res => {
+                                    setProductUomsMap(prev => ({ ...prev, [currentProductId]: res.data }));
+                                    const latestProductId = form.getFieldValue(["items", name, "productId"]);
+                                    if (latestProductId === currentProductId) {
+                                      form.setFieldValue(["items", name, "unitId"], defaultUnit);
+                                    }
+                                  }).catch(() => {
+                                    setProductUomsMap(prev => ({ ...prev, [currentProductId]: [] }));
+                                  });
+                                } else {
+                                  form.setFieldValue(["items", name, "unitId"], defaultUnit);
+                                }
+                              }}
+                            >
+                              {selectedWarehouseType !== 1 && (
+                                <Select.OptGroup label="Nguyên vật liệu">
+                                  {products
+                                    .filter((p) => p.type === 0)
+                                    .map((p) => (
+                                      <Select.Option key={p.id} value={p.id} label={`${p.code} - ${p.name}`}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', padding: "4px 0" }}>
+                                          <span style={{ fontWeight: 500 }}>{p.code} - {p.name}</span>
+                                          <Text type="secondary" style={{ fontSize: 11 }}>
+                                            Tồn kho khả dụng: <Text strong type={inventoryMap[p.id] > 0 ? "success" : "danger"}>{inventoryMap[p.id] || 0}</Text>
+                                          </Text>
+                                        </div>
+                                      </Select.Option>
+                                    ))}
+                                </Select.OptGroup>
+                              )}
 
-                        {selectedWarehouseType === 1 && (
-                          <Select.OptGroup label="Thành phẩm">
-                            {products
-                              .filter((p) => p.type === 1)
-                              .map((p) => (
-                                <Select.Option key={p.id} value={p.id} label={`${p.code} - ${p.name}`}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', padding: "4px 0" }}>
-                                    <span style={{ fontWeight: 500 }}>{p.code} - {p.name}</span>
-                                    <Text type="secondary" style={{ fontSize: 11 }}>
-                                      Tồn kho khả dụng: <Text strong type={inventoryMap[p.id] > 0 ? "success" : "danger"}>{inventoryMap[p.id] || 0}</Text>
-                                    </Text>
-                                  </div>
-                                </Select.Option>
-                              ))}
-                          </Select.OptGroup>
-                        )}
-                      </Select>
+                              {selectedWarehouseType === 1 && (
+                                <Select.OptGroup label="Thành phẩm">
+                                  {products
+                                    .filter((p) => p.type === 1)
+                                    .map((p) => (
+                                      <Select.Option key={p.id} value={p.id} label={`${p.code} - ${p.name}`}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', padding: "4px 0" }}>
+                                          <span style={{ fontWeight: 500 }}>{p.code} - {p.name}</span>
+                                          <Text type="secondary" style={{ fontSize: 11 }}>
+                                            Tồn kho khả dụng: <Text strong type={inventoryMap[p.id] > 0 ? "success" : "danger"}>{inventoryMap[p.id] || 0}</Text>
+                                          </Text>
+                                        </div>
+                                      </Select.Option>
+                                    ))}
+                                </Select.OptGroup>
+                              )}
+                            </Select>
+                          </Form.Item>
+                        );
+                      }}
                     </Form.Item>
                   </Col>
 
@@ -333,13 +355,40 @@ export default function CreateProductionGIModal({
                       {...restField}
                       name={[name, "quantity"]}
                       label="Số lượng"
+                      dependencies={[["items", name, "productId"], ["items", name, "unitId"]]}
                       rules={[
-                        { required: true, message: "Nhập SL" },
+                        { required: true, message: "Vui lòng nhập số lượng" },
                         {
                           type: "number",
                           min: 1,
-                          message: "Phải lớn hơn 0",
+                          message: "Số lượng phải lớn hơn 0",
                         },
+                        ({ getFieldValue }) => ({
+                          validator(_, value) {
+                            if (value === undefined || value === null) {
+                              return Promise.resolve();
+                            }
+                            const pId = getFieldValue(["items", name, "productId"]);
+                            const uId = getFieldValue(["items", name, "unitId"]);
+                            if (!pId) {
+                              return Promise.resolve();
+                            }
+                            const availableQty = inventoryMap[pId] ?? 0;
+                            const uoms = productUomsMap[pId] || [];
+                            const selectedUom = uoms.find((u: any) => u.unitId === uId);
+                            const factor = selectedUom ? (selectedUom.factor || 1) : 1;
+                            const qtyInBaseUnit = value * factor;
+
+                            if (qtyInBaseUnit > availableQty) {
+                              const maxQty = Math.floor(availableQty / factor);
+                              const unitName = units.find(u => u.id === uId)?.name || "đơn vị";
+                              return Promise.reject(
+                                new Error(`Vượt tồn kho (Tối đa: ${maxQty} ${unitName})`)
+                              );
+                            }
+                            return Promise.resolve();
+                          },
+                        }),
                       ]}
                     >
                       <InputNumber

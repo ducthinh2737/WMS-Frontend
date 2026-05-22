@@ -98,13 +98,10 @@ interface DashboardStats {
   totalInventory: number;
   availableInventory: number;
   lockedInventory: number;
-  totalOrders: number;
-  pendingOrders: number;
-  totalSalesAmount: number;
-  totalPOs: number;
-  pendingPOs: number;
   totalGRs: number;
   pendingGRs: number;
+  totalGIs: number;
+  pendingGIs: number;
 }
 
 /* ===================== CONSTANTS ===================== */
@@ -438,74 +435,30 @@ function InventorySlideshow({ items, loading }: { items: InventorySlideItem[]; l
   return (
     <Card
       loading={loading}
+      size="small"
       style={{
-        borderRadius: 12,
+        borderRadius: 10,
+        background: "linear-gradient(135deg, #e6fffb 0%, #fff 100%)",
         border: "1px solid #b5f5ec",
-        background: "linear-gradient(135deg, #e6fffb 0%, #f0fffe 100%)",
         height: "100%",
-        overflow: "hidden",
       }}
-      styles={{ body: { padding: "16px 20px" } }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <BoxPlotOutlined style={{ color: "#13c2c2", fontSize: 20 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>Tồn kho theo sản phẩm</Text>
-          <div
-            style={{
-              marginTop: 4,
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(6px)",
-              transition: "opacity 0.4s ease, transform 0.4s ease",
-            }}
-          >
+          <div style={{ fontSize: 11, color: "#595959" }}>Tồn kho nổi bật</div>
+          <div style={{ opacity: visible ? 1 : 0, transition: "opacity 0.2s", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {item ? (
               <>
-                <div style={{ fontSize: 11, color: "#08979c", fontWeight: 600, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {item.productCode}
-                </div>
-                <div style={{ fontSize: 12, color: "#595959", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {item.productName}
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#13c2c2", lineHeight: 1.1 }}>
+                <strong style={{ color: "#262626", fontSize: 13 }}>{item.productCode}</strong>
+                <span style={{ fontSize: 16, fontWeight: 700, marginLeft: 8, color: "#13c2c2" }}>
                   {Math.round(item.totalQty).toLocaleString()}
-                </div>
-                <div style={{ fontSize: 11, color: "#52c41a", marginTop: 2 }}>
-                  Khả dụng: {Math.round(item.availableQty).toLocaleString()}
-                </div>
-                <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 1 }}>
-                  {item.warehouseCount} kho lưu trữ
-                </div>
+                </span>
               </>
             ) : (
-              <div style={{ fontSize: 24, fontWeight: 700, color: "#13c2c2" }}>—</div>
+              <span style={{ fontSize: 16, fontWeight: 700, color: "#13c2c2" }}>—</span>
             )}
           </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#b5f5ec", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#13c2c2" }}>
-            <BoxPlotOutlined />
-          </div>
-          {items.length > 1 && (
-            <div style={{ display: "flex", gap: 3, flexWrap: "wrap", maxWidth: 44, justifyContent: "center" }}>
-              {items.slice(0, Math.min(items.length, 8)).map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: i === current % Math.min(items.length, 8) ? 12 : 5,
-                    height: 5,
-                    borderRadius: 3,
-                    background: i === current % Math.min(items.length, 8) ? "#13c2c2" : "#d9d9d9",
-                    transition: "all 0.3s ease",
-                  }}
-                />
-              ))}
-            </div>
-          )}
-          {items.length > 0 && (
-            <div style={{ fontSize: 10, color: "#8c8c8c", textAlign: "center" }}>
-              {current + 1}/{items.length}
-            </div>
-          )}
         </div>
       </div>
     </Card>
@@ -521,19 +474,19 @@ export default function Dashboard() {
     totalInventory: 0,
     availableInventory: 0,
     lockedInventory: 0,
-    totalOrders: 0,
-    pendingOrders: 0,
-    totalSalesAmount: 0,
-    totalPOs: 0,
-    pendingPOs: 0,
     totalGRs: 0,
     pendingGRs: 0,
+    totalGIs: 0,
+    pendingGIs: 0,
   });
 
   const [warehouseTypeGroups, setWarehouseTypeGroups] = useState<WarehouseTypeGroup[]>([]);
   const [inventoryByType, setInventoryByType] = useState<{ name: string; value: number; color: string }[]>([]);
   const [inventoryByProduct, setInventoryByProduct] = useState<{ productId: number; productCode: string; productName: string; totalQty: number; availableQty: number; warehouseCount: number }[]>([]);
   const [lowStockItems, setLowStockItems] = useState<{ productId: number; productCode: string; productName: string; totalQty: number; availableQty: number }[]>([]);
+  const [pendingGRs, setPendingGRs] = useState<any[]>([]);
+  const [pendingGIs, setPendingGIs] = useState<any[]>([]);
+  const [trendChartData, setTrendChartData] = useState<{ date: string; Nhập: number; Xuất: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
@@ -631,6 +584,70 @@ export default function Dashboard() {
       const availableInventory = inventories.reduce((s, i) => s + i.availableQuantity, 0);
       const lockedInventory = inventories.reduce((s, i) => s + i.lockedQuantity, 0);
 
+      // 4. Goods Receipts (GRs)
+      let grArr: any[] = [];
+      let pendingGRList: any[] = [];
+      let totalGRsCount = 0;
+      let pendingGRsCount = 0;
+      try {
+        const grRes = await inboundApi.getGRs();
+        grArr = extractArray(grRes);
+        totalGRsCount = grArr.length;
+        pendingGRsCount = grArr.filter((gr: any) => gr.status === 0).length; // status 0 is Pending
+        pendingGRList = grArr.filter((gr: any) => gr.status === 0).slice(0, 5);
+      } catch (e) {
+        console.error("Lỗi tải phiếu nhập cho dashboard", e);
+      }
+
+      // 5. Goods Issues (GIs)
+      let giArr: any[] = [];
+      let pendingGIList: any[] = [];
+      let totalGIsCount = 0;
+      let pendingGIsCount = 0;
+      try {
+        const giRes = await outboundApi.queryGoodsIssues();
+        giArr = extractArray(giRes);
+        totalGIsCount = giArr.length;
+        pendingGIsCount = giArr.filter((gi: any) => gi.status === 0).length; // status 0 is Pending
+        pendingGIList = giArr.filter((gi: any) => gi.status === 0).slice(0, 5);
+      } catch (e) {
+        console.error("Lỗi tải phiếu xuất cho dashboard", e);
+      }
+
+      // 6. Calculate trend data for the last 7 days
+      const trendMap = new Map<string, { date: string; Nhập: number; Xuất: number }>();
+      const last7Days: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dayStr = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+        last7Days.push(dayStr);
+        trendMap.set(dayStr, { date: dayStr, "Nhập": 0, "Xuất": 0 });
+      }
+
+      grArr.forEach((gr: any) => {
+        const dateVal = gr.createdAt || gr.createAt;
+        if (!dateVal) return;
+        const d = new Date(dateVal);
+        const dayStr = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+        if (trendMap.has(dayStr)) {
+          trendMap.get(dayStr)!.Nhập += 1;
+        }
+      });
+
+      giArr.forEach((gi: any) => {
+        const dateVal = gi.createAt || gi.createdAt;
+        if (!dateVal) return;
+        const d = new Date(dateVal);
+        const dayStr = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+        if (trendMap.has(dayStr)) {
+          trendMap.get(dayStr)!.Xuất += 1;
+        }
+      });
+
+      const trendData = last7Days.map(day => trendMap.get(day)!);
+      setTrendChartData(trendData);
+
       setStats(prev => ({
         ...prev,
         totalProducts,
@@ -638,7 +655,14 @@ export default function Dashboard() {
         totalInventory,
         availableInventory,
         lockedInventory,
+        totalGRs: totalGRsCount,
+        pendingGRs: pendingGRsCount,
+        totalGIs: totalGIsCount,
+        pendingGIs: pendingGIsCount,
       }));
+
+      setPendingGRs(pendingGRList);
+      setPendingGIs(pendingGIList);
 
       setWarehouseTypeGroups(groups);
       setInventoryByType(pieData);
@@ -659,7 +683,7 @@ export default function Dashboard() {
         .sort((a, b) => b.totalQty - a.totalQty)
         .map(p => ({ ...p, warehouseCount: p.warehouses.size }));
       setInventoryByProduct(productSummary);
-      
+
       const lowStock = productSummary.filter(p => p.totalQty < 50).sort((a, b) => a.totalQty - b.totalQty);
       setLowStockItems(lowStock);
 
@@ -711,13 +735,12 @@ export default function Dashboard() {
       <div style={{ marginBottom: 20 }}>
         <Row gutter={[12, 12]}>
           {[
-            { label: "Nhập kho", icon: <InboxOutlined />, color: "#1677ff", path: "/inbound" },
-            { label: "Xuất kho", icon: <ShoppingCartOutlined />, color: "#52c41a", path: "/outbound/orders/create" },
+            { label: "Nhập kho", icon: <InboxOutlined />, color: "#1677ff", path: "/inbound/receipt" },
+            { label: "Xuất kho", icon: <ShoppingCartOutlined />, color: "#52c41a", path: "/outbound/issue" },
             { label: "Chuyển kho", icon: <SwapOutlined />, color: "#fa8c16", path: "/transfer" },
-            { label: "Kiểm kê", icon: <SearchOutlined />, color: "#722ed1", path: "/stocktake" },
             { label: "Sản phẩm", icon: <PlusOutlined />, color: "#eb2f96", path: "/product/create" },
           ].map((act, i) => (
-            <Col key={i} xs={12} sm={8} md={4} lg={4}>
+            <Col key={i} xs={12} sm={12} md={6} lg={6}>
               <div
                 onClick={() => navigate(act.path)}
                 style={{
@@ -752,99 +775,158 @@ export default function Dashboard() {
         </Row>
       </div>
 
-      {/* TOP STATS */}
+      {/* STATS CARDS GRID */}
       <Row gutter={[12, 12]}>
-        <Col xs={24} sm={12} md={8}>
-          <StatCard title="Sản phẩm" value={stats.totalProducts} prefix={<DatabaseOutlined />} loading={loading} color="#1677ff" />
+        {/* 1. Sản phẩm */}
+        <Col xs={12} sm={8} md={4}>
+          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #e6f7ff 0%, #fff 100%)", border: "1px solid #91d5ff", height: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <DatabaseOutlined style={{ color: "#1890ff", fontSize: 20 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: "#595959", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Sản phẩm</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#1890ff" }}>{stats.totalProducts}</div>
+              </div>
+            </div>
+          </Card>
         </Col>
-        <Col xs={24} sm={12} md={8}>
-          <StatCard title="Kho hàng" value={stats.totalWarehouses} prefix={<HomeOutlined />} loading={loading} color="#722ed1" />
+
+        {/* 2. Kho hàng */}
+        <Col xs={12} sm={8} md={4}>
+          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #f9f0ff 0%, #fff 100%)", border: "1px solid #d3adf7", height: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <HomeOutlined style={{ color: "#722ed1", fontSize: 20 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: "#595959", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Kho hàng</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#722ed1" }}>{stats.totalWarehouses}</div>
+              </div>
+            </div>
+          </Card>
         </Col>
-        <Col xs={24} sm={24} md={8}>
+
+        {/* 3. Tồn khả dụng */}
+        <Col xs={12} sm={8} md={4}>
+          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #f6ffed 0%, #fff 100%)", border: "1px solid #b7eb8f", height: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 20 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: "#595959", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Tồn khả dụng</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#52c41a" }}>{stats.availableInventory.toLocaleString()}</div>
+              </div>
+            </div>
+          </Card>
+        </Col>
+
+        {/* 4. Đang bị khóa */}
+        <Col xs={12} sm={8} md={4}>
+          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)", border: "1px solid #ffd591", height: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <WarningOutlined style={{ color: "#fa8c16", fontSize: 20 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: "#595959", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Đang bị khóa</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#fa8c16" }}>{stats.lockedInventory.toLocaleString()}</div>
+              </div>
+            </div>
+          </Card>
+        </Col>
+
+        {/* 5. Phiếu kho chờ duyệt */}
+        <Col xs={12} sm={8} md={4}>
+          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #fff1f0 0%, #fff 100%)", border: "1px solid #ffa39e", height: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <ClockCircleOutlined style={{ color: "#f5222d", fontSize: 20 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: "#595959", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Chờ duyệt</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#f5222d" }}>
+                  {stats.pendingGRs + stats.pendingGIs} <span style={{ fontSize: 10, fontWeight: 400, color: "#8c8c8c" }}>({stats.pendingGRs}Nhập, {stats.pendingGIs}Xuất)</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </Col>
+
+        {/* 6. Tồn kho nổi bật */}
+        <Col xs={12} sm={8} md={4}>
           <InventorySlideshow items={inventoryByProduct} loading={loading} />
         </Col>
       </Row>
 
-      {/* INVENTORY DETAIL */}
-      <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
-        <Col xs={12} sm={8}>
-          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #e6f4ff 0%, #f0f9ff 100%)", border: "1px solid #91caff" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <CheckCircleOutlined style={{ color: "#1677ff", fontSize: 22 }} />
-              <div>
-                <div style={{ fontSize: 11, color: "#595959" }}>Tồn kho khả dụng</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#1677ff" }}>{stats.availableInventory.toLocaleString()}</div>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={12} sm={8}>
-          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)", border: "1px solid #ffd591" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <WarningOutlined style={{ color: "#fa8c16", fontSize: 22 }} />
-              <div>
-                <div style={{ fontSize: 11, color: "#595959" }}>Đang bị khóa</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#fa8c16" }}>{stats.lockedInventory.toLocaleString()}</div>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card loading={loading} size="small" style={{ borderRadius: 10, background: "linear-gradient(135deg, #f9f0ff 0%, #fff 100%)", border: "1px solid #d3adf7" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <SyncOutlined style={{ color: "#722ed1", fontSize: 22 }} />
-              <div>
-                <div style={{ fontSize: 11, color: "#595959" }}>Tần suất luân chuyển</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#722ed1" }}>2.4 <span style={{ fontSize: 12, fontWeight: 400 }}>lần/tháng</span></div>
-              </div>
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* MAIN CONTENT */}
+      {/* MAIN TWO-COLUMN CONTAINER */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {/* LEFT: Warehouse breakdown */}
+        {/* LEFT COLUMN: Charts & Breakdowns (span 14) */}
         <Col xs={24} lg={14}>
-          <Card
-            title={<div style={{ display: "flex", alignItems: "center", gap: 8 }}><HomeOutlined /><span>Tồn kho theo loại kho</span></div>}
-            style={{ borderRadius: 12, height: "100%" }}
-            loading={loading}
-          >
-            <Tabs
-              defaultActiveKey="0"
-              tabBarExtraContent={
-                <Text type="secondary" style={{ fontSize: 11 }}>
-                  {warehouseTypeGroups.reduce((s, g) => s + g.warehouses.length, 0)} kho tổng
-                </Text>
-              }
-              items={warehouseTypeGroups.map((group) => {
-                const cfg = WAREHOUSE_TYPE_CONFIG[group.type];
-                return {
-                  key: String(group.type),
-                  label: (
-                    <span>
-                      <span style={{ color: group.color, marginRight: 4 }}>{group.icon}</span>
-                      {cfg.label}
-                      {group.warehouses.length > 0 && (
-                        <Badge count={group.warehouses.length} style={{ marginLeft: 6, backgroundColor: group.color, fontSize: 10 }} />
-                      )}
-                    </span>
-                  ),
-                  children: <WarehouseTypeTab group={group} loading={loading} />,
-                };
-              })}
-            />
-          </Card>
+          <Row gutter={[0, 16]}>
+            {/* Trend Chart */}
+            <Col xs={24}>
+              <Card
+                title={
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <RiseOutlined style={{ color: "#1890ff" }} />
+                    <span>Xu hướng Xuất - Nhập kho (Số phiếu 7 ngày gần nhất)</span>
+                  </div>
+                }
+                style={{ borderRadius: 12 }}
+                loading={loading}
+              >
+                <div style={{ height: 230 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                      <RechartsTooltip />
+                      <Legend wrapperStyle={{ fontSize: 12, marginTop: 5 }} />
+                      <Bar dataKey="Nhập" fill="#1677ff" name="Phiếu nhập kho" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Xuất" fill="#52c41a" name="Phiếu xuất kho" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </Col>
+
+            {/* Warehouse breakdown */}
+            <Col xs={24}>
+              <Card
+                title={<div style={{ display: "flex", alignItems: "center", gap: 8 }}><HomeOutlined /><span>Tồn kho theo loại kho</span></div>}
+                style={{ borderRadius: 12 }}
+                loading={loading}
+              >
+                <Tabs
+                  defaultActiveKey="0"
+                  tabBarExtraContent={
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                      {warehouseTypeGroups.reduce((s, g) => s + g.warehouses.length, 0)} kho tổng
+                    </Text>
+                  }
+                  items={warehouseTypeGroups.map((group) => {
+                    const cfg = WAREHOUSE_TYPE_CONFIG[group.type];
+                    return {
+                      key: String(group.type),
+                      label: (
+                        <span>
+                          <span style={{ color: group.color, marginRight: 4 }}>{group.icon}</span>
+                          {cfg.label}
+                          {group.warehouses.length > 0 && (
+                            <Badge count={group.warehouses.length} style={{ marginLeft: 6, backgroundColor: group.color, fontSize: 10 }} />
+                          )}
+                        </span>
+                      ),
+                      children: <WarehouseTypeTab group={group} loading={loading} />,
+                    };
+                  })}
+                />
+              </Card>
+            </Col>
+          </Row>
         </Col>
 
-        {/* RIGHT: Pie + summary */}
+        {/* RIGHT COLUMN: Pie allocation & Summary (span 10) */}
         <Col xs={24} lg={10}>
           <Row gutter={[0, 16]}>
+            {/* Pie Chart: Allocation */}
             <Col xs={24}>
               <Card title="Phân bổ tồn kho" style={{ borderRadius: 12 }} loading={loading}>
                 {inventoryByType.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={230}>
                     <PieChart>
                       <Pie data={inventoryByType} cx="50%" cy="50%" outerRadius={80} innerRadius={45} dataKey="value" label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
                         {inventoryByType.map((entry, index) => (
@@ -860,6 +942,8 @@ export default function Dashboard() {
                 )}
               </Card>
             </Col>
+
+            {/* Warehouse Type Summary */}
             <Col xs={24}>
               <Card title="Tổng hợp theo loại kho" size="small" style={{ borderRadius: 12 }} loading={loading}>
                 {warehouseTypeGroups.map((g) => {
@@ -884,12 +968,80 @@ export default function Dashboard() {
                 })}
               </Card>
             </Col>
+
+            {/* Right: Pending Actions */}
+            <Col xs={24}>
+              <Card
+                title={
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span><ClockCircleOutlined style={{ marginRight: 6, color: "#1890ff" }} />Yêu cầu chờ xử lý</span>
+                    {(pendingGRs.length + pendingGIs.length) > 0 && <Badge count={pendingGRs.length + pendingGIs.length} style={{ backgroundColor: "#1890ff" }} />}
+                  </div>
+                }
+                style={{ borderRadius: 12, borderTop: "2px solid #1890ff" }}
+                loading={loading}
+              >
+                {pendingGRs.length === 0 && pendingGIs.length === 0 ? (
+                  <Empty description="Không có phiếu kho nào chờ xử lý" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                ) : (
+                  <Tabs defaultActiveKey="1" size="small">
+                    <Tabs.TabPane tab={`Phiếu nhập (${pendingGRs.length})`} key="1">
+                      {pendingGRs.length === 0 ? (
+                        <Empty description="Không có phiếu nhập kho chờ duyệt" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                      ) : (
+                        <div style={{ maxHeight: 220, overflowY: "auto" }}>
+                          {pendingGRs.map((gr) => (
+                            <div key={gr.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
+                              <div>
+                                <Text strong style={{ color: "#1890ff", cursor: "pointer", fontSize: 13 }} onClick={() => navigate("/inbound/receipt")}>
+                                  {gr.code}
+                                </Text>
+                                <div style={{ fontSize: 11, color: "#8c8c8c" }}>
+                                  Tạo ngày: {new Date(gr.createdAt).toLocaleDateString("vi-VN")}
+                                </div>
+                              </div>
+                              <Button type="link" size="small" onClick={() => navigate("/inbound/receipt")}>
+                                Duyệt ngay <ArrowRightOutlined />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Tabs.TabPane>
+                    <Tabs.TabPane tab={`Phiếu xuất (${pendingGIs.length})`} key="2">
+                      {pendingGIs.length === 0 ? (
+                        <Empty description="Không có phiếu xuất kho chờ duyệt" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                      ) : (
+                        <div style={{ maxHeight: 220, overflowY: "auto" }}>
+                          {pendingGIs.map((gi) => (
+                            <div key={gi.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
+                              <div>
+                                <Text strong style={{ color: "#52c41a", cursor: "pointer", fontSize: 13 }} onClick={() => navigate("/outbound/issue")}>
+                                  {gi.code}
+                                </Text>
+                                <div style={{ fontSize: 11, color: "#8c8c8c" }}>
+                                  Tạo ngày: {new Date(gi.createAt || gi.createdAt).toLocaleDateString("vi-VN")}
+                                </div>
+                              </div>
+                              <Button type="link" size="small" onClick={() => navigate("/outbound/issue")}>
+                                Duyệt ngay <ArrowRightOutlined />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Tabs.TabPane>
+                  </Tabs>
+                )}
+              </Card>
+            </Col>
           </Row>
         </Col>
       </Row>
 
-      {/* BOTTOM: Alerts */}
+      {/* BOTTOM SECTION: Alerts (span 24) */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        {/* Left: Low Stock Alerts */}
         <Col xs={24}>
           <Card
             title={
@@ -904,24 +1056,26 @@ export default function Dashboard() {
             {lowStockItems.length === 0 ? (
               <Empty description="Tất cả mặt hàng đều đủ tồn kho" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Row gutter={[16, 16]}>
-                {lowStockItems.map((item) => (
-                  <Col xs={24} sm={12} md={8} lg={6} key={item.productId}>
-                    <div style={{ padding: "12px", background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 8 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <Text strong style={{ fontSize: 13 }}>{item.productCode}</Text>
-                        <Tag color="error" style={{ margin: 0 }}>{item.totalQty.toLocaleString()}</Tag>
+              <div style={{ maxHeight: 250, overflowY: "auto", paddingRight: 4 }}>
+                <Row gutter={[8, 8]}>
+                  {lowStockItems.map((item) => (
+                    <Col xs={24} sm={12} md={8} lg={6} key={item.productId}>
+                      <div style={{ padding: "10px", background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                          <Text strong style={{ fontSize: 12 }}>{item.productCode}</Text>
+                          <Tag color="error" style={{ margin: 0, fontSize: 11 }}>{item.totalQty.toLocaleString()}</Tag>
+                        </div>
+                        <div style={{ fontSize: 11, color: "#595959", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {item.productName}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#8c8c8c", marginTop: 2 }}>
+                          Khả dụng: {item.availableQty.toLocaleString()}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, color: "#595959", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {item.productName}
-                      </div>
-                      <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 4 }}>
-                        Khả dụng: {item.availableQty.toLocaleString()}
-                      </div>
-                    </div>
-                  </Col>
-                ))}
-              </Row>
+                    </Col>
+                  ))}
+                </Row>
+              </div>
             )}
           </Card>
         </Col>
