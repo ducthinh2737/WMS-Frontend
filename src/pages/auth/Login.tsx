@@ -44,6 +44,15 @@ interface Toast { msg: string; type: "success" | "error" }
 const GLOBAL_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: #03030a !important;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
 .nexus-root { font-family: 'DM Sans', sans-serif; }
 .nexus-syne { font-family: 'Syne', sans-serif; }
 

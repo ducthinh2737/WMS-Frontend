@@ -144,8 +144,16 @@ export default function CreateProductionGRModal({
 
   const selectedWarehouseId = Form.useWatch("warehouseId", form);
   const selectedWarehouse = warehouses.find((w) => w.id === selectedWarehouseId);
+  const selectedSupplierId = Form.useWatch("supplierId", form);
 
   const filteredProducts = products.filter((p) => {
+    // Lọc theo Nhà cung cấp nếu được chọn
+    if (selectedSupplierId !== undefined && selectedSupplierId !== null) {
+      if (p.supplierId !== selectedSupplierId) {
+        return false;
+      }
+    }
+
     if (!selectedWarehouse) return true; // Nếu chưa chọn kho thì hiện hết hoặc rỗng tùy ý (đây chọn hiện hết)
 
     // Quy tắc lọc:
@@ -177,6 +185,10 @@ export default function CreateProductionGRModal({
             placeholder="Chọn nhà cung cấp (tùy chọn)"
             allowClear
             showSearch
+            onChange={() => {
+              // Reset items khi đổi nhà cung cấp để tránh chọn sai sản phẩm
+              form.setFieldValue("items", [{}]);
+            }}
             optionFilterProp="children"
             filterOption={(input, option) =>
               (option?.children as unknown as string)
