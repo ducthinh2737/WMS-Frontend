@@ -19,6 +19,7 @@ import {
   Select,
   Button,
   Space,
+  Segmented,
 } from "antd";
 import {
   DatabaseOutlined,
@@ -488,6 +489,9 @@ export default function Dashboard() {
   const [pendingGIs, setPendingGIs] = useState<any[]>([]);
   const [trendChartData, setTrendChartData] = useState<{ date: string; Nhập: number; Xuất: number }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [rawGRs, setRawGRs] = useState<any[]>([]);
+  const [rawGIs, setRawGIs] = useState<any[]>([]);
+  const [timePeriod, setTimePeriod] = useState<'week' | 'month' | 'year'>('week');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   // FILTERS
@@ -614,39 +618,9 @@ export default function Dashboard() {
         console.error("Lỗi tải phiếu xuất cho dashboard", e);
       }
 
-      // 6. Calculate trend data for the last 7 days
-      const trendMap = new Map<string, { date: string; Nhập: number; Xuất: number }>();
-      const last7Days: string[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dayStr = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
-        last7Days.push(dayStr);
-        trendMap.set(dayStr, { date: dayStr, "Nhập": 0, "Xuất": 0 });
-      }
-
-      grArr.forEach((gr: any) => {
-        const dateVal = gr.createdAt || gr.createAt;
-        if (!dateVal) return;
-        const d = new Date(dateVal);
-        const dayStr = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
-        if (trendMap.has(dayStr)) {
-          trendMap.get(dayStr)!.Nhập += 1;
-        }
-      });
-
-      giArr.forEach((gi: any) => {
-        const dateVal = gi.createAt || gi.createdAt;
-        if (!dateVal) return;
-        const d = new Date(dateVal);
-        const dayStr = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
-        if (trendMap.has(dayStr)) {
-          trendMap.get(dayStr)!.Xuất += 1;
-        }
-      });
-
-      const trendData = last7Days.map(day => trendMap.get(day)!);
-      setTrendChartData(trendData);
+      // 6. Save raw transactions for client-side filtering and trend calculation
+      setRawGRs(grArr);
+      setRawGIs(giArr);
 
       setStats(prev => ({
         ...prev,
@@ -699,6 +673,90 @@ export default function Dashboard() {
   useEffect(() => {
     loadDashboardData(filterWarehouseId);
   }, [loadDashboardData, filterWarehouseId]);
+
+  useEffect(() => {
+    const trendMap = new Map<string, { date: string; Nhập: number; Xuất: number }>();
+    const keys: string[] = [];
+
+    if (timePeriod === "week" || timePeriod === "month") {
+      const daysCount = timePeriod === "week" ? 7 : 30;
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const dayStr = `${day}/${month}`;
+        keys.push(dayStr);
+        trendMap.set(dayStr, { date: dayStr, "Nhập": 0, "Xuất": 0 });
+      }
+
+      rawGRs.forEach((gr: any) => {
+        const dateVal = gr.createdAt || gr.createAt;
+        if (!dateVal) return;
+        const d = new Date(dateVal);
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const dayStr = `${day}/${month}`;
+        if (trendMap.has(dayStr)) {
+          trendMap.get(dayStr)!.Nhập += 1;
+        }
+      });
+
+      rawGIs.forEach((gi: any) => {
+        const dateVal = gi.createAt || gi.createdAt;
+        if (!dateVal) return;
+        const d = new Date(dateVal);
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const dayStr = `${day}/${month}`;
+        if (trendMap.has(dayStr)) {
+          trendMap.get(dayStr)!.Xuất += 1;
+        }
+      });
+    } else {
+      // year
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        const monthStr = `${month}/${year}`;
+        keys.push(monthStr);
+        trendMap.set(monthStr, { date: monthStr, "Nhập": 0, "Xuất": 0 });
+      }
+
+      rawGRs.forEach((gr: any) => {
+        const dateVal = gr.createdAt || gr.createAt;
+        if (!dateVal) return;
+        const d = new Date(dateVal);
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        const monthStr = `${month}/${year}`;
+        if (trendMap.has(monthStr)) {
+          trendMap.get(monthStr)!.Nhập += 1;
+        }
+      });
+
+      rawGIs.forEach((gi: any) => {
+        const dateVal = gi.createAt || gi.createdAt;
+        if (!dateVal) return;
+        const d = new Date(dateVal);
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        const monthStr = `${month}/${year}`;
+        if (trendMap.has(monthStr)) {
+          trendMap.get(monthStr)!.Xuất += 1;
+        }
+      });
+    }
+
+    const trendData = keys.map((key) => trendMap.get(key)!);
+    setTrendChartData(trendData);
+  }, [rawGRs, rawGIs, timePeriod]);
+
+  const periodLabel = timePeriod === "week" ? "7 ngày gần nhất" : timePeriod === "month" ? "30 ngày gần nhất" : "12 tháng gần nhất";
+  const totalGRsInPeriod = trendChartData.reduce((sum, item) => sum + item.Nhập, 0);
+  const totalGIsInPeriod = trendChartData.reduce((sum, item) => sum + item.Xuất, 0);
 
   return (
     <div style={{ padding: "0 4px" }}>
@@ -861,12 +919,34 @@ export default function Dashboard() {
                 title={
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <RiseOutlined style={{ color: "#1890ff" }} />
-                    <span>Xu hướng Xuất - Nhập kho (Số phiếu 7 ngày gần nhất)</span>
+                    <span>Xu hướng Xuất - Nhập kho ({periodLabel})</span>
                   </div>
+                }
+                extra={
+                  <Segmented
+                    value={timePeriod}
+                    onChange={(val) => setTimePeriod(val as "week" | "month" | "year")}
+                    options={[
+                      { label: "Tuần", value: "week" },
+                      { label: "Tháng", value: "month" },
+                      { label: "Năm", value: "year" },
+                    ]}
+                    size="small"
+                  />
                 }
                 style={{ borderRadius: 12 }}
                 loading={loading}
               >
+                <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+                  <div style={{ background: "#e6f4ff", padding: "6px 12px", borderRadius: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 11 }}>Tổng phiếu nhập: </Text>
+                    <Text strong style={{ color: "#1677ff", fontSize: 13 }}>{totalGRsInPeriod} phiếu</Text>
+                  </div>
+                  <div style={{ background: "#f6ffed", padding: "6px 12px", borderRadius: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 11 }}>Tổng phiếu xuất: </Text>
+                    <Text strong style={{ color: "#52c41a", fontSize: 13 }}>{totalGIsInPeriod} phiếu</Text>
+                  </div>
+                </div>
                 <div style={{ height: 230 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

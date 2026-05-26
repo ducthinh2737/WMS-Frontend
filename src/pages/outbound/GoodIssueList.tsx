@@ -102,7 +102,7 @@ export default function GoodsIssueList() {
         )
       );
 
-      message.success("Duyệt GI thành công");
+      message.success("Duyệt phiếu xuất thành công");
 
       // sync backend
       setTimeout(() => {
@@ -206,7 +206,7 @@ export default function GoodsIssueList() {
             return (
               <Space wrap>
                 <Popconfirm
-                  title={`Duyệt GI ${r.code}?`}
+                  title={`Duyệt phiếu ${r.code}?`}
                   onConfirm={() => approveGI(r.id)}
                   okText="Duyệt"
                   cancelText="Hủy"

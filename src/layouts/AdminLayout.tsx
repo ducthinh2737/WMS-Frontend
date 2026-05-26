@@ -145,6 +145,12 @@ export default function AdminLayout() {
 
               },
               {
+                key: "stocktake",
+                icon: <ScanOutlined />,
+                label: <Link to="/stocktake">Stocktake List</Link>,
+
+              },
+              {
                 key: "users",
                 icon: <UserOutlined />,
                 label: <Link to="/users">User List</Link>,
@@ -153,12 +159,7 @@ export default function AdminLayout() {
 
 
 
-              {
-                key: "stocktake",
-                icon: <ScanOutlined />,
-                label: <Link to="/stocktake">Stocktake List</Link>,
 
-              },
 
               {
                 key: "roles",
@@ -166,6 +167,7 @@ export default function AdminLayout() {
                 label: <Link to="/roles">Role List</Link>,
 
               },
+
               {
                 key: "permissions",
                 icon: <LockOutlined />,
